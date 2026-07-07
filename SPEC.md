@@ -19,7 +19,7 @@ used for treasury funding only — not competing on the Universal Accounts track
 | Backend | Next.js API routes + PostgreSQL | Social ID ↔ address mapping, partitions, fund requests, invoices, transaction indexing/reporting. |
 | Files | Pinata | Invoice uploads → IPFS, CID stored in DB + emitted on-chain. |
 | Automation | Gelato Web3 Functions | Watches partition due-dates, permissionlessly calls `Vault.releaseVault(partitionId)`. |
-| Frontend | React + TypeScript + Tailwind + anime.js | Brutalist UI. |
+| Frontend | React + TypeScript + Tailwind + anime.js | Neo Brutalist UI. |
 
 Particle and ZeroDev never touch the same account: Particle moves money into the
 Vault, ZeroDev session keys move money out. They meet only at the Vault contract's
@@ -39,9 +39,24 @@ Vault, ZeroDev session keys move money out. They meet only at the Vault contract
    - Optional backup partition with no whitelist yet — holding pool for unassigned
      funds.
 5. Transaction Report — grouped by timestamp, user, amount, partition.
-6. QR Code generation.
-7. QR Code Payment — Vault pays out to a scanning merchant (invoice/expense payout
-   flow), not top-up.
+6. QR Code generation — two kinds:
+   a. Merchant QR (static): merchant displays a QR encoding their own receiving
+      address (`ethereum:<address>`, EIP-681 style). Merchant needs no
+      ArborWallet account/Social ID — any EOA works (existing wallet, or a
+      Magic login done on the spot if they have none).
+   b. Payment-request QR (dynamic): employee generates a QR encoding a signed
+      payment intent `{ partitionId, amount, invoiceRef, nonce, expiry }` with
+      a visible countdown. Scanning it opens a claim page where the payee
+      supplies/connects a receiving address; backend validates the intent and
+      executes the payout.
+7. QR Code Payment — invoice/expense payout flow, not top-up. Two directions:
+   a. Scan-to-pay (QRIS-style): employee scans a merchant's static QR
+      (captures `to` address), enters amount, attaches invoice; Vault pays out
+      from the employee's partition to that address.
+   b. Request-to-claim: payee scans the employee's payment-request QR before
+      `expiry`, provides a receiving address on the claim page, backend
+      validates + submits the withdraw. Countdown expiry + nonce prevent
+      reuse.
 
 ## Smart contract — `Vault.sol`
 
@@ -97,23 +112,39 @@ transactions(id, tx_hash, partition_id, user_id, amount_wei, type, timestamp)
   owner's ZeroDev sudo key → row flips to `approved` on confirmation.
 - **Invoice upload**: file → Pinata pin → CID → `keccak256` hash → passed as
   `invoiceCidHash` into `withdraw()`. `processedInvoices` mapping blocks reuse.
-- **QR payment**: employee generates QR encoding `{ partitionId, amount,
-  merchantAddress, invoiceRef, nonce, expiry }` → merchant scans → backend
-  validates → builds `withdraw()` UserOp via employee's ZeroDev session key →
-  sponsored submit → funds land in merchant wallet.
+- **QR payment (scan-to-pay)**: merchant displays a static QR encoding their
+  own address (`ethereum:<address>`, EIP-681) — needs no ArborWallet account.
+  Employee scans it in-app, capturing `merchantAddress`; enters `amount`,
+  attaches invoice (Pinata CID/hash) → backend validates against
+  `partitionLimit` → builds `withdraw(partitionId, merchantAddress, amount,
+  invoiceCidHash)` UserOp via employee's ZeroDev session key → sponsored
+  submit → funds land directly in merchant's wallet, no further action from
+  merchant.
+- **QR payment (request-to-claim)**: employee generates a signed payment
+  intent `{ partitionId, amount, invoiceRef, nonce, expiry }` rendered as a
+  QR with countdown. Payee scans → claim page → supplies/connects receiving
+  address → backend verifies signature, expiry, nonce unused, limit → builds
+  the same `withdraw()` UserOp via the employee's session key → payout.
+  Nonce stored in DB, marked spent on execution.
+- **Currency display**: UI shows fiat by default with one-tap toggle to ETH.
+  Backend proxies a price feed (e.g. CoinGecko) and caches it; on-chain values
+  stay wei, conversion is display-only.
 - **Auto-release**: Gelato Web3 Function polls `dueDate` per partition, calls
   `releaseVault(id)` permissionlessly when due.
 
 ## Frontend
 
-React + TS + Tailwind + Wagmi + viem. anime.js for QR reveal, partition-balance
-bar fill on withdraw, hard-cut brutalist modal transitions (no ease-in-out).
-
-Brutalist design system: raw black borders (2–4px, no border-radius except one
-deliberate accent shape), high contrast (black/white + one alarm color for
-over-limit states), monospace/grotesk display font, exposed grid lines, oversized
-balance numerals, hard offset shadows (`box-shadow: 6px 6px 0 #000`) instead of
-blur shadows.
+React + TS + Tailwind + Wagmi + viem + anime.js. Design direction lives in
+`web/DESIGN.md` (source of truth): "product neo-brutalism" — Stripe-like
+treasury software with a neo-brutalist visual skin (2px borders, hard offset
+shadows, Inter/Geist + JetBrains Mono for technical data, #12AAFF accent).
+Blockchain infrastructure is hidden from primary flows; user-facing copy is
+finance language ("Confirm Payment", not "Sign UserOperation"). Tech surfaces
+only in a polished "View Infrastructure" expandable panel per key flow —
+session key scope, UserOp hash, paymaster sponsorship — designed as
+first-class UI for the ZeroDev-subtrack demo, not a debug dump. Fiat-first
+balances with one-tap ETH toggle. Motion under 250 ms, state-communicating
+only.
 
 ## Open assumptions
 

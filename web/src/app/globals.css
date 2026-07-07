@@ -1,26 +1,45 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --color-bg: #fafaf8;
+  --color-surface: #ffffff;
+  --color-ink: #161616;
+  --color-muted: #6b7280;
+  --color-line: #202020;
+  --color-accent: #12aaff;
+  --color-success: #0e9f6e;
+  --color-warning: #f59e0b;
+  --color-danger: #d92d20;
+  /* text-safe variants — bright hexes above are fills/borders only (fail 4.5:1 as text) */
+  --color-accent-text: #0369a1;
+  --color-success-text: #047857;
+  --color-warning-text: #b45309;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --shadow-hard: 4px 4px 0 0 #202020;
+  --shadow-hard-sm: 2px 2px 0 0 #202020;
+  --shadow-hard-lg: 6px 6px 0 0 #202020;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* hard-cut motion: state changes only, under 250ms */
+.transition-shift {
+  transition: box-shadow 120ms linear, transform 120ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
