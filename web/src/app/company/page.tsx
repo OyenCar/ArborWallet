@@ -2,16 +2,57 @@
 
 import { useState } from "react";
 import { useCurrency } from "@/lib/currency";
-import { mockFundRequests, mockPartitions } from "@/lib/mock/data";
-import { formatDate } from "@/lib/format";
+import {
+  mockAutomations,
+  mockFundRequests,
+  mockPartitions,
+} from "@/lib/mock/data";
+import { formatDate, truncAddr } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { ViewInfrastructure } from "@/components/ViewInfrastructure";
+import type { AutomationRule } from "@/lib/types";
+
+const automationMeta: Record<
+  AutomationRule["kind"],
+  { title: string; describe: (r: AutomationRule, fmt: (w: string) => string, label: (id: string) => string) => string }
+> = {
+  scheduled_release: {
+    title: "Scheduled release",
+    describe: (r, _fmt, label) =>
+      `Releases the full ${label(r.partitionId)} budget to its members${r.config.releaseAt ? ` on ${formatDate(r.config.releaseAt)}` : ""}. Runs even if no one is online.`,
+  },
+  low_balance_topup: {
+    title: "Low-balance top-up",
+    describe: (r, fmt, label) =>
+      `When ${label(r.partitionId)} drops below ${fmt(r.config.thresholdWei ?? "0")}, refills ${fmt(r.config.topUpWei ?? "0")} from ${label(r.config.sourcePartitionId ?? "")}.`,
+  },
+  recurring_payment: {
+    title: "Recurring payment",
+    describe: (r, fmt) =>
+      `Pays ${fmt(r.config.amountWei ?? "0")} to ${r.config.toAddress ? truncAddr(r.config.toAddress) : "vendor"} every ${r.config.intervalDays ?? 30} days from the budget. Invoice logged automatically.`,
+  },
+  limit_reset: {
+    title: "Spending limit reset",
+    describe: (r, _fmt, label) =>
+      `Resets every member's spent counter in ${label(r.partitionId)} every ${r.config.intervalDays ?? 30} days — fresh budget each cycle.`,
+  },
+};
 
 export default function Company() {
   const { fmt } = useCurrency();
   const [frozen, setFrozen] = useState(false);
   const [freezeArmed, setFreezeArmed] = useState(false);
+  const [rules, setRules] = useState<AutomationRule[]>(mockAutomations);
+
+  const partitionLabel = (id: string) =>
+    mockPartitions.find((p) => p.id === id)?.label ?? "budget";
+
+  function toggleRule(id: string) {
+    setRules((rs) =>
+      rs.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)),
+    );
+  }
 
   function handleFreeze() {
     if (frozen) {
@@ -123,26 +164,50 @@ export default function Company() {
         </div>
       </section>
 
-      {/* Payroll automation */}
+      {/* Automation rules */}
       <section>
-        <h2 className="mb-4 text-3xl font-bold">Automation</h2>
-        {mockPartitions
-          .filter((p) => p.dueDate)
-          .map((p) => (
-            <div key={p.id} className="border-2 border-line bg-surface p-5 shadow-hard">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold">{p.label} — scheduled release</p>
-                  <p className="mt-1 text-sm text-muted">
-                    {fmt(p.balanceWei)} splits across {p.members.length} people on{" "}
-                    {formatDate(p.dueDate!)}. Runs automatically, even if no one
-                    is online.
-                  </p>
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 className="text-3xl font-bold">Automation</h2>
+          <Button variant="primary">New Automation</Button>
+        </div>
+        <div className="space-y-4">
+          {rules.map((r) => {
+            const meta = automationMeta[r.kind];
+            return (
+              <div
+                key={r.id}
+                className={`border-2 border-line bg-surface p-5 shadow-hard ${r.enabled ? "" : "opacity-60"}`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-bold">
+                      {partitionLabel(r.partitionId)} — {meta.title}
+                    </p>
+                    <p className="mt-1 text-sm text-muted">
+                      {meta.describe(r, fmt, partitionLabel)}
+                    </p>
+                    <p className="mt-2 font-mono text-xs text-muted">
+                      {r.nextRunAt
+                        ? `Next run: ${formatDate(r.nextRunAt)}`
+                        : "Runs when condition is met"}
+                      {r.lastRunAt && ` · Last run: ${formatDate(r.lastRunAt)}`}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusChip status={r.enabled ? "active" : "paused"} />
+                    <Button
+                      className="px-3 py-1.5 text-xs"
+                      onClick={() => toggleRule(r.id)}
+                      aria-pressed={r.enabled}
+                    >
+                      {r.enabled ? "Pause" : "Resume"}
+                    </Button>
+                  </div>
                 </div>
-                <Button className="px-3 py-1.5 text-xs">Edit Schedule</Button>
               </div>
-            </div>
-          ))}
+            );
+          })}
+        </div>
       </section>
 
       {/* Emergency freeze */}

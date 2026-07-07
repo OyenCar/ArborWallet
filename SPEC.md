@@ -18,7 +18,7 @@ used for treasury funding only — not competing on the Universal Accounts track
 | Chain | Arbitrum Sepolia (421614) for demo, Arbitrum One (42161) for prod |
 | Backend | Next.js API routes + PostgreSQL | Social ID ↔ address mapping, partitions, fund requests, invoices, transaction indexing/reporting. |
 | Files | Pinata | Invoice uploads → IPFS, CID stored in DB + emitted on-chain. |
-| Automation | Gelato Web3 Functions | Watches partition due-dates, permissionlessly calls `Vault.releaseVault(partitionId)`. |
+| Automation | Gelato Web3 Functions | Executes all four automation kinds: scheduled release (`releaseVault`), low-balance top-up (`topUp`), recurring vendor payment (withdraw via owner-scoped session key), spending-limit reset (`resetSpent`). |
 | Frontend | React + TypeScript + Tailwind + anime.js | Neo Brutalist UI. |
 
 Particle and ZeroDev never touch the same account: Particle moves money into the
@@ -38,6 +38,15 @@ Vault, ZeroDev session keys move money out. They meet only at the Vault contract
      own whitelist; whitelisted users can only spend within their partition.
    - Optional backup partition with no whitelist yet — holding pool for unassigned
      funds.
+   - Automation rules beyond payroll (all Gelato-executed, owner-configured):
+     a. Low-balance top-up — when a partition drops below a threshold, refill a
+        fixed amount from the backup partition (`topUp(from, to, amount)`).
+     b. Recurring vendor payment — fixed amount to a fixed address every N days
+        (subscriptions/rent), executed as a `withdraw()` with auto-logged
+        invoice ref.
+     c. Spending-limit reset — zero `partitionSpent` for all members every N
+        days (`resetSpent(partitionId)`), giving fresh periodic budgets without
+        manual re-provisioning.
 5. Transaction Report — grouped by timestamp, user, amount, partition.
 6. QR Code generation — two kinds:
    a. Merchant QR (static): merchant displays a QR encoding their own receiving
@@ -81,7 +90,9 @@ Functions: `deposit(partitionId)`, `createPartition(dueDate, isBackup)`,
 `whitelistToPartition(partitionId, users[], limits[])`, `withdraw(partitionId, to,
 amount, invoiceCidHash)` (only fn the ZeroDev session key `CallPolicy` targets),
 `requestApproved(partitionId, user, additionalLimit)`, `releaseVault(partitionId)`
-(permissionless, Gelato-called).
+(permissionless, Gelato-called), `topUp(fromPartitionId, toPartitionId, amount)`
+(onlyOwner or Gelato-permitted; low-balance automation), `resetSpent(partitionId)`
+(Gelato-called on cycle; zeroes partitionSpent for fresh periodic budgets).
 
 Events: `Deposited`, `PartitionCreated`, `Whitelisted`,
 `Withdrawn(partitionId, user, amount, invoiceCidHash)`, `FundRequestApproved`,

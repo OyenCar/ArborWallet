@@ -1,6 +1,7 @@
 // Typed fetch client for /api routes. Pages currently import mocks directly;
 // integration phase swaps those imports for these calls.
 import type {
+  AutomationRule,
   FundRequest,
   Partition,
   PaymentIntent,
@@ -100,6 +101,28 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then(j<{ claimed: boolean; txHash: string }>),
+
+  automations: () =>
+    fetch("/api/automations").then(j<{ automations: AutomationRule[] }>),
+
+  createAutomation: (body: {
+    partitionId: string;
+    kind: AutomationRule["kind"];
+    config?: AutomationRule["config"];
+    nextRunAt?: string;
+  }) =>
+    fetch("/api/automations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(j<AutomationRule>),
+
+  toggleAutomation: (id: string, enabled: boolean) =>
+    fetch(`/api/automations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    }).then(j<AutomationRule>),
 
   price: () =>
     fetch("/api/price").then(j<{ ethUsd: number; source: string }>),

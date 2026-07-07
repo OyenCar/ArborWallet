@@ -63,6 +63,31 @@ export interface PaymentIntent {
   expiresAt: string; // ISO
 }
 
+export type AutomationKind =
+  | "scheduled_release" // payroll: releaseVault(partitionId) at dueDate
+  | "low_balance_topup" // pull from backup partition when balance < threshold
+  | "recurring_payment" // fixed amount to fixed address every interval
+  | "limit_reset"; // zero out partitionSpent on a cycle (fresh monthly budgets)
+
+export interface AutomationRule {
+  id: string;
+  partitionId: string;
+  kind: AutomationKind;
+  enabled: boolean;
+  /** kind-specific settings — see mock data for shapes per kind */
+  config: {
+    thresholdWei?: string; // low_balance_topup: trigger level
+    topUpWei?: string; // low_balance_topup: refill amount
+    sourcePartitionId?: string; // low_balance_topup: usually the backup partition
+    toAddress?: `0x${string}`; // recurring_payment
+    amountWei?: string; // recurring_payment
+    intervalDays?: number; // recurring_payment / limit_reset
+    releaseAt?: string; // scheduled_release (ISO)
+  };
+  nextRunAt: string | null; // ISO; null = condition-based (no fixed schedule)
+  lastRunAt: string | null;
+}
+
 export interface SessionStatus {
   active: boolean;
   scope: string; // e.g. "withdraw() @ Vault"

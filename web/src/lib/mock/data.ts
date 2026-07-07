@@ -1,4 +1,10 @@
-import type { FundRequest, Partition, Tx, User } from "../types";
+import type {
+  AutomationRule,
+  FundRequest,
+  Partition,
+  Tx,
+  User,
+} from "../types";
 import { ethToWei } from "../format";
 
 export const MOCK_ETH_USD = 3200;
@@ -40,7 +46,7 @@ export const mockPartitions: Partition[] = [
     label: "Payroll",
     isBackup: false,
     balanceWei: ethToWei(37.5),
-    dueDate: "2026-07-25T09:00:00Z",
+    dueDate: "2026-07-07T21:13:00Z",
     members: [
       {
         socialId: "@budi",
@@ -173,5 +179,52 @@ export const mockTxs: Tx[] = [
     status: "paid",
     description: "Q3 budget allocation",
     timestamp: "2026-07-01T08:00:00Z",
+  },
+];
+
+export const mockAutomations: AutomationRule[] = [
+  {
+    id: "a1",
+    partitionId: "p2", // Payroll
+    kind: "scheduled_release",
+    enabled: true,
+    config: { releaseAt: "2026-07-25T09:00:00Z" },
+    nextRunAt: "2026-07-25T09:00:00Z",
+    lastRunAt: "2026-06-25T09:00:00Z",
+  },
+  {
+    id: "a2",
+    partitionId: "p1", // Marketing
+    kind: "low_balance_topup",
+    enabled: true,
+    config: {
+      thresholdWei: ethToWei(2),
+      topUpWei: ethToWei(5),
+      sourcePartitionId: "p4", // Emergency (backup)
+    },
+    nextRunAt: null, // condition-based
+    lastRunAt: null,
+  },
+  {
+    id: "a3",
+    partitionId: "p3", // Operations
+    kind: "recurring_payment",
+    enabled: true,
+    config: {
+      toAddress: "0x4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c2D3e",
+      amountWei: ethToWei(0.35),
+      intervalDays: 30,
+    },
+    nextRunAt: "2026-07-28T09:00:00Z",
+    lastRunAt: "2026-06-28T09:00:00Z",
+  },
+  {
+    id: "a4",
+    partitionId: "p1", // Marketing
+    kind: "limit_reset",
+    enabled: false,
+    config: { intervalDays: 30 },
+    nextRunAt: "2026-08-01T00:00:00Z",
+    lastRunAt: "2026-07-01T00:00:00Z",
   },
 ];
