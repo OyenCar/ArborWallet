@@ -126,6 +126,8 @@ blur shadows.
 ## Repo scaffold (to fill in)
 
 - `contracts/` — `Vault.sol`, deploy scripts, tests
-- `backend/` — Next.js API routes, Postgres schema/migrations
-- `frontend/` — React + TS + Tailwind + anime.js app
-- `lib/` — Magic / Particle / ZeroDev client wiring, shared across frontend/backend
+- `web/` — single Next.js app: `src/app/api/**` = backend (API routes, Postgres
+  access), `src/app/**` (outside `api/`) + `src/components/**` = frontend
+  (React + TS + Tailwind + anime.js). Merged into one app to avoid
+  CORS/dual-deploy overhead; ownership split enforced by folder, not by repo.
+- `lib/` — Magic / Particle / ZeroDev client wiring, shared, imported by `web/`
