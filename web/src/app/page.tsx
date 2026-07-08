@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCurrency } from "@/lib/currency";
 import {
@@ -11,11 +12,23 @@ import {
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
+import { BudgetDetailPanel } from "@/components/BudgetDetailPanel";
+import { AnimatedAmount } from "@/components/ui/AnimatedAmount";
+import { useDragScroll } from "@/lib/useDragScroll";
+import { staggerIn } from "@/lib/motion";
+import type { Partition } from "@/lib/types";
 
 export default function Dashboard() {
   const { fmt } = useCurrency();
   const pending = mockFundRequests.filter((r) => r.status === "pending");
   const payroll = mockPartitions.find((p) => p.dueDate);
+  const [openPartition, setOpenPartition] = useState<Partition | null>(null);
+  const drag = useDragScroll<HTMLDivElement>();
+
+  // budget cards rise in on mount, 40ms apart
+  useEffect(() => {
+    staggerIn(document.querySelectorAll("[data-budget-card]"));
+  }, []);
 
   return (
     <div className="space-y-12">
@@ -24,8 +37,8 @@ export default function Dashboard() {
         <p className="text-sm font-medium uppercase tracking-wide text-muted">
           Company Treasury
         </p>
-        <h1 className="mt-2 text-6xl font-extrabold tracking-tight tabular-nums md:text-7xl">
-          {fmt(mockVaultTotalWei)}
+        <h1 className="mt-2 text-6xl font-extrabold tracking-tight md:text-7xl">
+          <AnimatedAmount wei={mockVaultTotalWei} />
         </h1>
         <div className="mt-6 flex gap-3">
           <Button variant="primary">Create Budget</Button>
@@ -33,33 +46,51 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Budgets */}
+      {/* Budgets — horizontal scroll-snap rail, click for detail panel */}
       <section>
         <div className="mb-4 flex items-baseline justify-between">
           <h2 className="text-3xl font-bold">Budgets</h2>
-          <Link href="/budgets" className="text-sm text-accent-text underline underline-offset-4">
-            View all
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {mockPartitions.map((p) => (
-            <Link
-              key={p.id}
-              href={`/budgets/${p.id}`}
-              className="border-2 border-line bg-surface p-5 shadow-hard transition-shift hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px]"
-            >
-              <p className="text-sm font-medium text-muted">{p.label}</p>
-              <p className="mt-1 text-2xl font-bold">{fmt(p.balanceWei)}</p>
-              <p className="mt-2 text-xs text-muted">
-                {p.isBackup
-                  ? "Reserve — no members yet"
-                  : `${p.members.length} member${p.members.length === 1 ? "" : "s"}`}
-                {p.dueDate && " · auto-release scheduled"}
-              </p>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs text-muted">drag / scroll →</span>
+            <Link href="/budgets" className="text-sm text-accent-text underline underline-offset-4">
+              View all
             </Link>
-          ))}
+          </div>
+        </div>
+        <div className="relative">
+          <div
+            {...drag}
+            className="scrollbar-hide -mx-6 flex cursor-grab snap-x snap-proximity gap-4 overflow-x-auto px-6 pb-2 select-none active:cursor-grabbing"
+          >
+            {mockPartitions.map((p) => (
+              <button
+                key={p.id}
+                data-budget-card
+                onClick={() => setOpenPartition(p)}
+                className="w-72 shrink-0 snap-start border-2 border-line bg-surface p-5 text-left opacity-0 shadow-hard transition-shift hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px]"
+              >
+                <p className="text-sm font-medium text-muted">{p.label}</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums">{fmt(p.balanceWei)}</p>
+                <p className="mt-2 text-xs text-muted">
+                  {p.isBackup
+                    ? "Reserve — no members yet"
+                    : `${p.members.length} member${p.members.length === 1 ? "" : "s"}`}
+                  {p.dueDate && " · auto-release scheduled"}
+                </p>
+              </button>
+            ))}
+          </div>
+          {/* right-edge fade — signals more cards off-screen */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-bg to-transparent" />
         </div>
       </section>
+
+      {openPartition && (
+        <BudgetDetailPanel
+          partition={openPartition}
+          onClose={() => setOpenPartition(null)}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         {/* Pending approvals */}

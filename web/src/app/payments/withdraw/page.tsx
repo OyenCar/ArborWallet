@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCurrency } from "@/lib/currency";
 import { mockPartitions } from "@/lib/mock/data";
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { ViewInfrastructure } from "@/components/ViewInfrastructure";
 import { CheckIcon } from "@/components/ui/icons";
+import { AnimatedAmount } from "@/components/ui/AnimatedAmount";
+import { popIn } from "@/lib/motion";
 
 type Step = "budget" | "details" | "review" | "done";
 
@@ -22,6 +24,11 @@ export default function Withdraw() {
   const [invoice, setInvoice] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<WithdrawResult | null>(null);
+  const successIcon = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (step === "done" && successIcon.current) popIn(successIcon.current);
+  }, [step]);
 
   const budget = mockPartitions.find((p) => p.id === budgetId);
   const budgets = mockPartitions.filter((p) => !p.isBackup);
@@ -173,9 +180,13 @@ export default function Withdraw() {
       {step === "done" && result && (
         <div className="space-y-5">
           <div className="border-2 border-line bg-surface p-8 text-center shadow-hard-lg">
-            <CheckIcon className="mx-auto h-14 w-14 text-success-text" />
+            <div ref={successIcon} className="mx-auto w-fit">
+              <CheckIcon className="h-14 w-14 text-success-text" />
+            </div>
             <h2 className="mt-3 text-3xl font-bold">Payment Sent</h2>
-            <p className="mt-2 text-xl font-bold tabular-nums text-accent-text">{fmt(amountWei)}</p>
+            <p className="mt-2 text-xl font-bold text-accent-text">
+              <AnimatedAmount wei={amountWei} />
+            </p>
             <p className="mt-1 text-sm text-muted">
               Settled instantly. No network fee.
             </p>

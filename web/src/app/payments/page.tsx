@@ -27,11 +27,13 @@ export default function Payments() {
           <Link
             key={a.href}
             href={a.href}
-            className="border-2 border-line bg-surface p-6 shadow-hard transition-shift hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px]"
+            className="group border-2 border-line bg-surface p-6 shadow-hard transition-shift hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px]"
           >
             <h2 className="text-xl font-bold">{a.title}</h2>
             <p className="mt-2 text-sm text-muted">{a.desc}</p>
-            <p className="mt-4 font-mono text-sm text-accent-text">→</p>
+            <p className="mt-4 font-mono text-sm text-accent-text transition-transform duration-150 group-hover:translate-x-1.5">
+              →
+            </p>
           </Link>
         ))}
       </div>

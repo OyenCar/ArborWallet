@@ -34,6 +34,16 @@ body {
   transition: box-shadow 120ms linear, transform 120ms linear;
 }
 
+/* bounded horizontal scroll-snap rails (budgets carousel) — hide scrollbar,
+   affordance comes from partial next-card peek + "swipe →" hint, not the bar */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

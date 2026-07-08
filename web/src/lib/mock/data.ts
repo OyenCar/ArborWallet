@@ -15,6 +15,26 @@ export const mockUser: User = {
   role: "owner",
 };
 
+// Login directory — every account that can sign in (mock Magic phase).
+export const mockUsers: User[] = [
+  mockUser,
+  {
+    socialId: "@budi",
+    address: "0x1a2B3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B",
+    role: "employee",
+  },
+  {
+    socialId: "@rina",
+    address: "0x2B3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c",
+    role: "employee",
+  },
+  {
+    socialId: "@agus",
+    address: "0x3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c2D",
+    role: "employee",
+  },
+];
+
 export const mockVaultTotalWei = ethToWei(150.7345);
 
 export const mockPartitions: Partition[] = [
