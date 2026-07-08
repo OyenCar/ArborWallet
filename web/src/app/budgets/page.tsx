@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCurrency } from "@/lib/currency";
 import { mockPartitions } from "@/lib/mock/data";
 import { Button } from "@/components/ui/Button";
+import { Progress } from "@/components/ui/Progress";
+import { AnimatedAmount } from "@/components/ui/AnimatedAmount";
 
 export default function Budgets() {
-  const { fmt } = useCurrency();
-
   return (
     <div className="space-y-8">
       <div className="flex items-end justify-between">
@@ -32,12 +31,14 @@ export default function Budgets() {
             >
               <div className="flex items-baseline justify-between">
                 <h2 className="text-xl font-bold">{p.label}</h2>
-                <p className="text-2xl font-bold">{fmt(p.balanceWei)}</p>
+                <p className="text-2xl font-bold">
+                  <AnimatedAmount wei={p.balanceWei} />
+                </p>
               </div>
-              <div className="mt-4 h-3 border-2 border-line bg-bg">
-                <div
-                  className="h-full bg-accent"
-                  style={{ width: `${pct}%` }}
+              <div className="mt-4">
+                <Progress
+                  fraction={pct / 100}
+                  label={`${pct}% of allocation spent`}
                 />
               </div>
               <p className="mt-2 text-sm text-muted">

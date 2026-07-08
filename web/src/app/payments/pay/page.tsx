@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCurrency } from "@/lib/currency";
 import { mockPartitions } from "@/lib/mock/data";
@@ -10,6 +10,8 @@ import type { WithdrawResult } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { ViewInfrastructure } from "@/components/ViewInfrastructure";
 import { CheckIcon, ScanIcon } from "@/components/ui/icons";
+import { AnimatedAmount } from "@/components/ui/AnimatedAmount";
+import { popIn } from "@/lib/motion";
 
 // Scan-to-pay: vendor shows a static address QR (EIP-681), employee scans.
 // Camera scanning lands with the real wallet layer; mock uses a simulated scan.
@@ -21,6 +23,11 @@ export default function PayVendor() {
   const [invoice, setInvoice] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<WithdrawResult | null>(null);
+  const successIcon = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (result && successIcon.current) popIn(successIcon.current);
+  }, [result]);
 
   const amountWei = amount ? ethToWei(parseFloat(amount) || 0) : "0";
   const budgets = mockPartitions.filter((p) => !p.isBackup);
@@ -125,9 +132,13 @@ export default function PayVendor() {
       {result && (
         <div className="space-y-5">
           <div className="border-2 border-line bg-surface p-8 text-center shadow-hard-lg">
-            <CheckIcon className="mx-auto h-14 w-14 text-success-text" />
+            <div ref={successIcon} className="mx-auto w-fit">
+              <CheckIcon className="h-14 w-14 text-success-text" />
+            </div>
             <h2 className="mt-3 text-3xl font-bold">Vendor Paid</h2>
-            <p className="mt-2 text-xl font-bold tabular-nums text-accent-text">{fmt(amountWei)}</p>
+            <p className="mt-2 text-xl font-bold text-accent-text">
+              <AnimatedAmount wei={amountWei} />
+            </p>
             <p className="mt-1 text-sm text-muted">
               Funds arrived in the vendor&apos;s account. Nothing more to do.
             </p>

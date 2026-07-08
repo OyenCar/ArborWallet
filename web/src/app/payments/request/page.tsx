@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useCurrency } from "@/lib/currency";
@@ -10,6 +10,7 @@ import { ethToWei } from "@/lib/format";
 import type { PaymentIntent } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { ViewInfrastructure } from "@/components/ViewInfrastructure";
+import { popIn } from "@/lib/motion";
 
 function Countdown({ until, onExpire }: { until: string; onExpire: () => void }) {
   const [left, setLeft] = useState(0);
@@ -34,6 +35,7 @@ function Countdown({ until, onExpire }: { until: string; onExpire: () => void })
 
 export default function RequestQR() {
   const { fmt } = useCurrency();
+  const qrBox = useRef<HTMLDivElement>(null);
   const [budgetId, setBudgetId] = useState(mockPartitions[0].id);
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
@@ -42,6 +44,11 @@ export default function RequestQR() {
 
   const budgets = mockPartitions.filter((p) => !p.isBackup);
   const amountWei = amount ? ethToWei(parseFloat(amount) || 0) : "0";
+
+  // QR reveal pop (SPEC: anime.js QR reveal)
+  useEffect(() => {
+    if (intent && !expired && qrBox.current) popIn(qrBox.current);
+  }, [intent, expired]);
 
   async function generate() {
     setBusy(true);
@@ -117,7 +124,7 @@ export default function RequestQR() {
       ) : (
         <div className="space-y-5">
           <div className="border-2 border-line bg-surface p-8 text-center shadow-hard-lg">
-            <div className="mx-auto inline-block border-2 border-line bg-white p-4">
+            <div ref={qrBox} className="mx-auto inline-block border-2 border-line bg-white p-4">
               <QRCodeSVG
                 value={JSON.stringify(intent)}
                 size={220}
