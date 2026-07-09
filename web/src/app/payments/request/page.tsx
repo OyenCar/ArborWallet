@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useCurrency } from "@/lib/currency";
-import { mockPartitions } from "@/lib/mock/data";
-import { mockWallet } from "@/lib/mock/wallet";
 import { ethToWei } from "@/lib/format";
 import type { PaymentIntent } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { ViewInfrastructure } from "@/components/ViewInfrastructure";
 import { popIn } from "@/lib/motion";
+import { usePartitions } from "@/lib/useApi";
+import { AuthGate } from "@/components/AuthGate";
 
 function Countdown({ until, onExpire }: { until: string; onExpire: () => void }) {
   const [left, setLeft] = useState(0);
@@ -33,16 +33,17 @@ function Countdown({ until, onExpire }: { until: string; onExpire: () => void })
   );
 }
 
-export default function RequestQR() {
+function RequestQRContent() {
   const { fmt } = useCurrency();
+  const { data: partitionsData } = usePartitions();
   const qrBox = useRef<HTMLDivElement>(null);
-  const [budgetId, setBudgetId] = useState(mockPartitions[0].id);
+  const [budgetId, setBudgetId] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [intent, setIntent] = useState<PaymentIntent | null>(null);
   const [expired, setExpired] = useState(false);
 
-  const budgets = mockPartitions.filter((p) => !p.isBackup);
+  const budgets = (partitionsData?.partitions ?? []).filter((p) => !p.isBackup);
   const amountWei = amount ? ethToWei(parseFloat(amount) || 0) : "0";
 
   // QR reveal pop (SPEC: anime.js QR reveal)
@@ -50,14 +51,28 @@ export default function RequestQR() {
     if (intent && !expired && qrBox.current) popIn(qrBox.current);
   }, [intent, expired]);
 
+  useEffect(() => {
+    if (!budgetId && budgets.length > 0) {
+      setBudgetId(budgets[0].id);
+    }
+  }, [budgetId, budgets]);
+
   async function generate() {
     setBusy(true);
     setExpired(false);
-    const i = await mockWallet.createPaymentIntent({
-      partitionId: budgetId,
-      amountWei,
-      invoiceRef: `INV-${Date.now()}`,
+    const res = await fetch("/api/intents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        partitionId: budgetId,
+        amountWei,
+        invoiceRef: `INV-${Date.now()}`,
+      }),
     });
+    const i = await res.json();
+    if (!res.ok) {
+      throw new Error(i.error ?? "Failed to create payment intent");
+    }
     setIntent(i);
     setBusy(false);
   }
@@ -154,5 +169,13 @@ export default function RequestQR() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function RequestQR() {
+  return (
+    <AuthGate>
+      <RequestQRContent />
+    </AuthGate>
   );
 }

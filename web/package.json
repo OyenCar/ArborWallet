@@ -9,14 +9,18 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.62.0",
+    "@magic-sdk/admin": "^2.8.2",
+    "@prisma/client": "^5.22.0",
+    "@tanstack/react-query": "^5.101.2",
     "animejs": "^4.5.0",
-    "next": "16.2.10",
+    "magic-sdk": "latest",
+    "next": "^16.2.10",
     "qrcode.react": "^4.2.0",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "uuid": "^14.0.1",
     "viem": "^2.54.6",
-    "wagmi": "^2.14.0"
+    "wagmi": "^3.7.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -25,7 +29,17 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "@ampproject/toolbox-optimizer@2.6.0": true,
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "es5-ext@0.10.64": true,
+    "prisma@5.22.0": true,
+    "unrs-resolver@1.12.2": true,
+    "sharp@0.34.5": true
   }
 }

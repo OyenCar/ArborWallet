@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Address {
+  socialId String @id @map("social_id") @db.VarChar(64)
+  address  String @db.VarChar(64)
+  user     User?
+
+  @@map("address")
+}
+
+model User {
+  id           BigInt   @id @default(autoincrement())
+  magicIssuer  String   @unique @map("magic_issuer")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  socialId     String?  @unique @map("social_id") @db.VarChar(64)
+  address      Address? @relation(fields: [socialId], references: [socialId])
+  partitions   PartitionMember[]
+  transactions Transaction[]
+  fundRequests FundRequest[]
+  invoices     Invoice[]
+
+  @@map("users")
+}
+
+model Partition {
+  id              BigInt    @id @default(autoincrement())
+  onChainId       BigInt    @unique @map("on_chain_id")
+  corpId          String    @map("corp_id") @db.Uuid
+  label           String
+  isBackup        Boolean   @default(false) @map("is_backup")
+  dueDate         DateTime? @map("due_date") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  partitionMembers PartitionMember[]
+  transactions    Transaction[]
+  fundRequests    FundRequest[]
+  invoices        Invoice[]
+
+  @@map("partitions")
+}
+
+model PartitionMember {
+  partitionId BigInt @map("partition_id")
+  userId      BigInt @map("user_id")
+  limitWei    Decimal @map("limit_wei") @db.Decimal(78, 0)
+  spentWei    Decimal @default(0) @map("spent_wei") @db.Decimal(78, 0)
+  partition   Partition @relation(fields: [partitionId], references: [id])
+  user        User @relation(fields: [userId], references: [id])
+
+  @@id([partitionId, userId])
+  @@map("partition_members")
+}
+
+model Transaction {
+  id          BigInt           @id @default(autoincrement())
+  txHash      Bytes            @map("tx_hash")
+  partitionId BigInt           @map("partition_id")
+  userId      BigInt           @map("user_id")
+  amountWei   Decimal          @map("amount_wei") @db.Decimal(78, 0)
+  type        transaction_type
+  timestamp   DateTime         @db.Timestamptz(6)
+  partition   Partition        @relation(fields: [partitionId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
+
+  @@index([partitionId], map: "idx_transactions_partition")
+  @@index([timestamp], map: "idx_transactions_timestamp")
+  @@index([userId], map: "idx_transactions_user")
+  @@map("transactions")
+}
+
+model FundRequest {
+  id          String              @id @db.Uuid
+  partitionId BigInt              @map("partition_id")
+  userId      BigInt              @map("user_id")
+  amountWei   Decimal             @map("amount_wei") @db.Decimal(78, 0)
+  reason      String
+  status      fund_request_status @default(pending)
+  requestedAt DateTime            @default(now()) @map("requested_at") @db.Timestamptz(6)
+  approvedAt  DateTime?           @map("approved_at") @db.Timestamptz(6)
+  partition   Partition           @relation(fields: [partitionId], references: [id])
+  user        User                @relation(fields: [userId], references: [id])
+
+  @@index([status], map: "idx_fund_requests_status")
+  @@map("fund_requests")
+}
+
+model Invoice {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cid         String
+  hash        Bytes    @unique
+  partitionId BigInt   @map("partition_id")
+  userId      BigInt   @map("user_id")
+  amountWei   Decimal  @map("amount_wei") @db.Decimal(78, 0)
+  txHash      Bytes?   @map("tx_hash")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  partition   Partition @relation(fields: [partitionId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("invoices")
+}
+
+enum fund_request_status {
+  pending
+  approved
+  rejected
+}
+
+enum transaction_type {
+  deposit
+  withdraw
+  release
+}

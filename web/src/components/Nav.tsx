@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCurrency } from "@/lib/currency";
+import { useAuth } from "@/lib/AuthContext";
 
 const links = [
   { href: "/", label: "Dashboard" },
@@ -16,6 +17,7 @@ const links = [
 export function Nav() {
   const pathname = usePathname();
   const { currency, toggle } = useCurrency();
+  const { auth, logout } = useAuth();
 
   return (
     <header className="border-b-2 border-line bg-surface">
@@ -43,14 +45,36 @@ export function Nav() {
             );
           })}
         </nav>
-        <button
-          onClick={toggle}
-          className="min-h-11 border-2 border-line bg-surface px-3 font-mono text-xs font-semibold shadow-hard-sm transition-shift hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
-          title="Toggle display currency"
-          aria-label={`Display currency: ${currency}. Click to switch.`}
-        >
-          {currency} ⇄
-        </button>
+        <div className="flex items-center gap-2">
+          {auth?.socialId ? (
+            <span className="rounded border-2 border-line bg-surface px-3 py-2 text-xs font-semibold">
+              {auth.socialId}
+            </span>
+          ) : null}
+          {auth?.socialId ? (
+            <button
+              onClick={logout}
+              className="min-h-11 border-2 border-line bg-surface px-3 text-sm font-semibold shadow-hard-sm transition-shift hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="min-h-11 border-2 border-line bg-surface px-3 text-sm font-semibold shadow-hard-sm transition-shift hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+            >
+              Login
+            </Link>
+          )}
+          <button
+            onClick={toggle}
+            className="min-h-11 border-2 border-line bg-surface px-3 font-mono text-xs font-semibold shadow-hard-sm transition-shift hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+            title="Toggle display currency"
+            aria-label={`Display currency: ${currency}. Click to switch.`}
+          >
+            {currency} ⇄
+          </button>
+        </div>
       </div>
     </header>
   );

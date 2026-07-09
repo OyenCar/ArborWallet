@@ -3,12 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCurrency } from "@/lib/currency";
-import {
-  mockFundRequests,
-  mockPartitions,
-  mockTxs,
-  mockVaultTotalWei,
-} from "@/lib/mock/data";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
@@ -17,11 +11,17 @@ import { AnimatedAmount } from "@/components/ui/AnimatedAmount";
 import { useDragScroll } from "@/lib/useDragScroll";
 import { staggerIn } from "@/lib/motion";
 import type { Partition } from "@/lib/types";
+import { usePartitions, useTransactions, useFundRequests } from "@/lib/useApi";
+import { AuthGate } from "@/components/AuthGate";
 
-export default function Dashboard() {
+function DashboardContent() {
   const { fmt } = useCurrency();
-  const pending = mockFundRequests.filter((r) => r.status === "pending");
-  const payroll = mockPartitions.find((p) => p.dueDate);
+  const { data: partitionsData } = usePartitions();
+  const { data: txData } = useTransactions();
+  const { data: fundData } = useFundRequests("pending");
+  const pending = fundData?.fundRequests ?? [];
+  const partitions = partitionsData?.partitions ?? [];
+  const payroll = partitions.find((p) => p.dueDate);
   const [openPartition, setOpenPartition] = useState<Partition | null>(null);
   const drag = useDragScroll<HTMLDivElement>();
 
@@ -38,7 +38,7 @@ export default function Dashboard() {
           Company Treasury
         </p>
         <h1 className="mt-2 text-6xl font-extrabold tracking-tight md:text-7xl">
-          <AnimatedAmount wei={mockVaultTotalWei} />
+          <AnimatedAmount wei={partitionsData?.vaultTotalWei ?? "0"} />
         </h1>
         <div className="mt-6 flex gap-3">
           <Button variant="primary">Create Budget</Button>
@@ -62,7 +62,7 @@ export default function Dashboard() {
             {...drag}
             className="scrollbar-hide -mx-6 flex cursor-grab snap-x snap-proximity gap-4 overflow-x-auto px-6 pb-2 select-none active:cursor-grabbing"
           >
-            {mockPartitions.map((p) => (
+            {partitions.map((p) => (
               <button
                 key={p.id}
                 data-budget-card
@@ -152,7 +152,7 @@ export default function Dashboard() {
           </Link>
         </div>
         <div className="border-2 border-line bg-surface shadow-hard">
-          {mockTxs.slice(0, 4).map((t) => (
+          {(txData?.transactions ?? []).slice(0, 4).map((t) => (
             <div
               key={t.id}
               className="flex items-center justify-between border-b border-line/20 px-4 py-3 last:border-b-0"
@@ -173,5 +173,13 @@ export default function Dashboard() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <AuthGate>
+      <DashboardContent />
+    </AuthGate>
   );
 }
