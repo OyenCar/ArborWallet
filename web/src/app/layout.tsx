@@ -3,7 +3,7 @@ import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { CurrencyProvider } from "@/lib/currency";
 import { AppShell } from "@/components/AppShell";
-import MagicProvider from "./context/MagicProvider";
+import { FirebaseProvider } from "./context/FirebaseProvider";
 import { UserProvider } from "./context/UserContext";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -24,13 +24,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geist.variable} ${jetbrains.variable} antialiased`}>
-        <MagicProvider>
+        <FirebaseProvider>
           <UserProvider>
             <CurrencyProvider>
               <AppShell>{children}</AppShell>
             </CurrencyProvider>
           </UserProvider>
-        </MagicProvider>
+        </FirebaseProvider>
       </body>
     </html>
   );
