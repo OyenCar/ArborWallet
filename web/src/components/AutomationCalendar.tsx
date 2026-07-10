@@ -20,7 +20,9 @@ const meta: Record<
       label: (id: string) => string,
     ) => string;
   }
-> = {
+> =
+// dummy for now 
+{
   scheduled_release: {
     title: "Scheduled release",
     describe: (r, _fmt, label) =>
@@ -112,7 +114,9 @@ export function AutomationCalendar() {
     const path = lineRef.current;
     if (!wrap || !path) return;
     const dayEl = selectedDay ? dayRefs.current.get(selectedDay) : null;
-    const cardEl = wrap.querySelector("[data-line-target]");
+    const cardEl = selectedDay
+      ? wrap.querySelector(`[data-day="${selectedDay}"]`)
+      : null;
     if (!dayEl || !cardEl) {
       path.setAttribute("d", "");
       return;
@@ -207,46 +211,43 @@ export function AutomationCalendar() {
     return cells;
   }, [month]);
 
-  const agenda = (
-    selectedDay
-      ? scheduled.filter((r) => dayKey(new Date(r.nextRunAt!)) === selectedDay)
-      : scheduled
-  ).sort(
+  // always show every scheduled automation — the calendar only points, never filters
+  const agenda = [...scheduled].sort(
     (a, b) => new Date(a.nextRunAt!).getTime() - new Date(b.nextRunAt!).getTime(),
   );
 
-  const ruleCard = (r: AutomationRule, isLineTarget = false) => {
+  const ruleCard = (r: AutomationRule) => {
     const m = meta[r.kind];
+    const day = r.nextRunAt ? dayKey(new Date(r.nextRunAt)) : undefined;
+    const pointed = !!day && day === selectedDay; // line lands here
+    const open = expandedId === r.id;
     return (
       <div
         key={r.id}
-        data-line-target={isLineTarget || undefined}
-        className={`border-2 border-line bg-surface p-4 shadow-hard ${r.enabled ? "" : "opacity-60"}`}
+        data-day={day}
+        className={`border-2 bg-surface shadow-hard transition-shift ${
+          pointed ? "border-accent" : "border-line"
+        } ${r.enabled ? "" : "opacity-60"}`}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
+        <div className="flex items-start justify-between gap-3 p-4">
+          {/* click header → open/close description */}
+          <button
+            onClick={() => setExpandedId(open ? null : r.id)}
+            aria-expanded={open}
+            className="flex-1 text-left"
+          >
             <p className="font-bold">
               {partitionLabel(r.partitionId)} — {m.title}
             </p>
-            <p className="mt-1 text-sm text-muted">
-              {m.describe(r, fmt, partitionLabel)}
+            <p className="mt-1 font-mono text-xs text-muted">
+              {r.nextRunAt
+                ? `Next run: ${formatDate(r.nextRunAt)}`
+                : "Runs when condition is met"}
+              <span className="ml-2 text-accent-text">
+                {open ? "− details" : "+ details"}
+              </span>
             </p>
-            {r.nextRunAt ? (
-              <div className="mt-2">
-                {selectedDay ? (
-                  <DaysUntil target={r.nextRunAt} />
-                ) : (
-                  <p className="font-mono text-xs text-muted">
-                    Next run: {formatDate(r.nextRunAt)}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="mt-2 font-mono text-xs text-muted">
-                Runs when condition is met
-              </p>
-            )}
-          </div>
+          </button>
           <div className="flex shrink-0 items-center gap-2">
             <StatusChip status={r.enabled ? "active" : "paused"} />
             <Button
@@ -258,6 +259,18 @@ export function AutomationCalendar() {
             </Button>
           </div>
         </div>
+        {open && (
+          <div className="border-t-2 border-line/20 p-4">
+            <p className="text-sm text-muted">
+              {m.describe(r, fmt, partitionLabel)}
+            </p>
+            {r.nextRunAt && (
+              <div className="mt-2">
+                <DaysUntil target={r.nextRunAt} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -281,26 +294,24 @@ export function AutomationCalendar() {
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
             <h3 className="text-sm font-bold uppercase tracking-wide text-muted">
-              {selectedDay
-                ? `Scheduled · ${formatDate(`${selectedDay}T12:00:00Z`).split(",")[0]}`
-                : "Scheduled runs"}
+              Scheduled runs
             </h3>
             {selectedDay && (
               <button
                 onClick={() => setSelectedDay(null)}
                 className="text-sm text-accent-text underline underline-offset-4"
               >
-                Show all
+                Clear pointer
               </button>
             )}
           </div>
           {agenda.length === 0 ? (
             <p className="border-2 border-dashed border-line p-4 text-sm text-muted">
-              No runs scheduled this day.
+              No scheduled runs.
             </p>
           ) : (
             <div className="space-y-3">
-              {agenda.map((r, i) => ruleCard(r, !!selectedDay && i === 0))}
+              {agenda.map((r) => ruleCard(r))}
             </div>
           )}
         </div>
