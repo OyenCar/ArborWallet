@@ -12,6 +12,7 @@ const links = [
   { href: "/automation", label: "Automation" },
   { href: "/activity", label: "Activity" },
   { href: "/company", label: "Company" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function Nav() {
