@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/app/context/UserContext";
 import { Nav } from "@/components/Nav";
 
-const PUBLIC_ROUTES = ["/login"];
+const PUBLIC_ROUTES = ["/login", "/callback"];
 
 // Client auth gate: unauthenticated users are redirected to /login (with a
 // ?next= return path). Public routes render bare (no Nav).

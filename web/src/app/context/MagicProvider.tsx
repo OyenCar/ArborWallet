@@ -6,7 +6,10 @@
 // (the Vault chain, SPEC) instead of the guide's Ethereum Sepolia.
 // Without an API key the app runs in mock/demo mode (see UserContext).
 import { Magic } from "magic-sdk";
+import { OAuthExtension } from "@magic-ext/oauth2";
 import Web3 from "web3";
+
+type MagicWithOAuth = Magic<[OAuthExtension]>;
 import {
   type ReactNode,
   createContext,
@@ -20,7 +23,7 @@ const KEY = process.env.NEXT_PUBLIC_MAGIC_API_KEY;
 export const magicEnabled = Boolean(KEY);
 
 type MagicContextType = {
-  magic: Magic | null;
+  magic: MagicWithOAuth | null;
   web3: Web3 | null;
 };
 
@@ -32,7 +35,7 @@ const MagicContext = createContext<MagicContextType>({
 export const useMagic = () => useContext(MagicContext);
 
 const MagicProvider = ({ children }: { children: ReactNode }) => {
-  const [magic, setMagic] = useState<Magic | null>(null);
+  const [magic, setMagic] = useState<MagicWithOAuth | null>(null);
   const [web3, setWeb3] = useState<Web3 | null>(null);
 
   useEffect(() => {
@@ -42,6 +45,7 @@ const MagicProvider = ({ children }: { children: ReactNode }) => {
         rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
         chainId: 421614,
       },
+      extensions: [new OAuthExtension()],
     });
     setMagic(m);
     setWeb3(new Web3(m.rpcProvider as never));

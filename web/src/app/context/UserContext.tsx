@@ -17,8 +17,12 @@ interface UserContextType {
   user: User | null;
   loading: boolean;
   usingMagic: boolean;
-  /** Magic: opens the built-in Login UI. Mock: pass a socialId to impersonate. */
+  /** Magic: opens the built-in Login UI (email OTP). Mock: pass a socialId. */
   login: (mockSocialId?: string) => Promise<void>;
+  /** Google OAuth — redirects away to Google, returns to /callback. */
+  loginWithGoogle: () => Promise<void>;
+  /** Called on /callback to finish the OAuth redirect and set the user. */
+  finishOAuth: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -121,6 +125,27 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     [magic, hydrateFromMagic],
   );
 
+  const loginWithGoogle = useCallback(async () => {
+    if (!magic) throw new Error("Magic not ready");
+    // redirects the browser to Google; control returns to /callback
+    await magic.oauth2.loginWithRedirect({
+      provider: "google",
+      redirectURI: `${window.location.origin}/callback`,
+    });
+  }, [magic]);
+
+  const finishOAuth = useCallback(async () => {
+    if (!magic) throw new Error("Magic not ready");
+    setLoading(true);
+    try {
+      await magic.oauth2.getRedirectResult(); // completes the OAuth handshake
+      const u = await hydrateFromMagic();
+      if (u) setUser(u);
+    } finally {
+      setLoading(false);
+    }
+  }, [magic, hydrateFromMagic]);
+
   const logout = useCallback(async () => {
     if (magicEnabled) {
       try {
@@ -136,7 +161,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UserContext.Provider
-      value={{ user, loading, usingMagic: magicEnabled, login, logout }}
+      value={{
+        user,
+        loading,
+        usingMagic: magicEnabled,
+        login,
+        loginWithGoogle,
+        finishOAuth,
+        logout,
+      }}
     >
       {children}
     </UserContext.Provider>
