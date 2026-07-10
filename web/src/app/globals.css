@@ -44,6 +44,12 @@ body {
   display: none;
 }
 
+/* Keep unselected calendar dates visible (override text-muted/50 + disabled state) */
+.grid-cols-7 button:disabled {
+  color: var(--color-muted) !important;
+  opacity: 1 !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

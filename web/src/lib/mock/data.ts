@@ -247,4 +247,13 @@ export const mockAutomations: AutomationRule[] = [
     nextRunAt: "2026-08-01T00:00:00Z",
     lastRunAt: "2026-07-01T00:00:00Z",
   },
+  {
+    id: "a5",
+    partitionId: "p2", // Payroll
+    kind: "scheduled_release",
+    enabled: true,
+    config: { releaseAt: "2026-06-25T09:00:00Z" },
+    nextRunAt: "2026-06-25T09:00:00Z",
+    lastRunAt: "2026-05-25T09:00:00Z",
+  },
 ];

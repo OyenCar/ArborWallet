@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCurrency } from "@/lib/currency";
+import { useUser } from "@/app/context/UserContext";
 
 const links = [
   { href: "/", label: "Dashboard" },
@@ -15,7 +16,14 @@ const links = [
 
 export function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { currency, toggle } = useCurrency();
+  const { user, logout } = useUser();
+
+  async function handleLogout() {
+    await logout();
+    router.replace("/login");
+  }
 
   return (
     <header className="border-b-2 border-line bg-surface">
@@ -43,14 +51,32 @@ export function Nav() {
             );
           })}
         </nav>
-        <button
-          onClick={toggle}
-          className="min-h-11 border-2 border-line bg-surface px-3 font-mono text-xs font-semibold shadow-hard-sm transition-shift hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
-          title="Toggle display currency"
-          aria-label={`Display currency: ${currency}. Click to switch.`}
-        >
-          {currency} ⇄
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggle}
+            className="min-h-11 border-2 border-line bg-surface px-3 font-mono text-xs font-semibold shadow-hard-sm transition-shift hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+            title="Toggle display currency"
+            aria-label={`Display currency: ${currency}. Click to switch.`}
+          >
+            {currency} ⇄
+          </button>
+          {user && (
+            <div className="flex items-center gap-2 border-l-2 border-line/20 pl-2">
+              <span
+                className="hidden font-mono text-xs text-muted sm:inline"
+                title={user.address}
+              >
+                {user.socialId}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="min-h-11 border-2 border-line bg-surface px-3 text-xs font-semibold shadow-hard-sm transition-shift hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
