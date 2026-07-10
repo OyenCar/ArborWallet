@@ -1,7 +1,7 @@
 // src/app/components/SendTransaction.tsx
 
 import { useCallback, useState } from "react"
-import { useMagic } from "../context/MagicProvider"
+import { useMagic } from "@/app/context/MagicProvider"
 
 const SendTransaction = () => {
   const { web3 } = useMagic()

@@ -3,6 +3,7 @@ import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { CurrencyProvider } from "@/lib/currency";
 import { Nav } from "@/components/Nav";
+import { AuthGate } from "@/components/AuthGate";
 import MagicProvider from "./context/MagicProvider";
 import { UserProvider } from "./context/UserContext";
 import { Providers } from "@/components/Providers";
@@ -30,7 +31,9 @@ export default function RootLayout({
             <UserProvider>
               <CurrencyProvider>
                 <Nav />
-                <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+                <main className="mx-auto max-w-6xl px-6 py-10">
+                  <AuthGate>{children}</AuthGate>
+                </main>
               </CurrencyProvider>
             </UserProvider>
           </MagicProvider>

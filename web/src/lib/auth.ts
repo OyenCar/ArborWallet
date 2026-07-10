@@ -113,15 +113,15 @@ export async function verifyMagicTokenNoSocial(
       });
     }
 
-    const address =
-      user.socialId &&
-      (await db.address.findUnique({ where: { socialId: user.socialId } }));
+    const address = user.socialId
+      ? await db.address.findUnique({ where: { socialId: user.socialId } })
+      : null;
 
     return {
       userId: user.id,
       magicIssuer: user.magicIssuer,
       socialId: user.socialId ?? undefined,
-      address: address?.address,
+      address: address?.address ?? undefined,
     };
   } catch (error) {
     console.error("[Auth] Token verification failed:", error);

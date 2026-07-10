@@ -11,7 +11,7 @@ interface AuthContextType {
   auth: AuthState | null;
   isLoading: boolean;
   login: (token: string) => Promise<void>;
-  linkSocialId: (socialId: string) => Promise<void>;
+  linkSocialId: (socialId: string, address: string) => Promise<void>;
   logout: () => void;
 }
 

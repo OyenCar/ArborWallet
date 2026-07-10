@@ -56,8 +56,8 @@ export function MagicLoginComponent() {
     }
 
     const metadata = await magic.user.getInfo();
-    if (metadata.publicAddress) {
-      return metadata.publicAddress;
+    if (metadata && typeof metadata === "object" && "publicAddress" in metadata) {
+      return (metadata as any).publicAddress;
     }
 
     if (web3) {

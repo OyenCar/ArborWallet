@@ -26,24 +26,36 @@ export function Nav() {
           ArborWallet
         </Link>
         <nav className="order-last flex w-full flex-wrap items-center gap-1 md:order-none md:w-auto">
-          {links.map((l) => {
-            const active =
-              l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
-            return (
-              <Link
+          {auth?.socialId ? (
+            links.map((l) => {
+              const active =
+                l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex min-h-11 items-center px-3 text-sm font-medium ${
+                    active
+                      ? "border-2 border-line bg-accent text-ink shadow-hard-sm"
+                      : "text-muted hover:text-ink"
+                  }`}
+                >
+                  {l.label}
+                </Link>
+              );
+            })
+          ) : (
+            links.map((l) => (
+              <span
                 key={l.href}
-                href={l.href}
-                aria-current={active ? "page" : undefined}
-                className={`flex min-h-11 items-center px-3 text-sm font-medium ${
-                  active
-                    ? "border-2 border-line bg-accent text-ink shadow-hard-sm"
-                    : "text-muted hover:text-ink"
-                }`}
+                className="flex min-h-11 items-center px-3 text-sm font-medium text-muted opacity-50"
+                aria-disabled="true"
               >
                 {l.label}
-              </Link>
-            );
-          })}
+              </span>
+            ))
+          )}
         </nav>
         <div className="flex items-center gap-2">
           {auth?.socialId ? (
