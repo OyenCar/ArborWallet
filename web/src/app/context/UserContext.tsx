@@ -9,112 +9,224 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { magicEnabled, useMagic } from "./MagicProvider";
+import { useFirebaseAuth } from "./FirebaseProvider";
+import { firebaseEnabled } from "@/lib/firebase";
 import { mockUsers } from "@/lib/mock/data";
-import type { Role, User } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 interface UserContextType {
   user: User | null;
   loading: boolean;
-  usingMagic: boolean;
-  /** Magic: opens the built-in Login UI (email OTP). Mock: pass a socialId. */
-  login: (mockSocialId?: string) => Promise<void>;
-  /** Google OAuth — redirects away to Google, returns to /callback. */
+  /** True when Firebase Auth is configured and active */
+  usingFirebase: boolean;
+  /** Firebase sign-in: email + password. Mock: pass socialId. */
+  login: (email: string, password: string) => Promise<void>;
+  /** Google sign-in: authentication via Google popup. */
   loginWithGoogle: () => Promise<void>;
-  /** Called on /callback to finish the OAuth redirect and set the user. */
-  finishOAuth: () => Promise<void>;
+  /** GitHub sign-in: authentication via GitHub popup. */
+  loginWithGithub: () => Promise<void>;
+  /** Telegram sign-in: authentication via Telegram (simulated for demo). */
+  loginWithTelegram: (username?: string) => Promise<void>;
+  /** Firebase sign-up: create account + create wallet. Mock: register dynamically. */
+  signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | null>(null);
 const SS_KEY = "arbor.session"; // mock-mode persistence only
 
-// Resolve a Magic email/address to an app User via the backend directory,
-// falling back to the seeded mock directory (SPEC Social ID ↔ address flow).
-async function resolveUser(
+// ── Wallet creation via Magic Server Wallet TEE ──────────────────────────────
+async function createServerWallet(firebaseIdToken: string): Promise<string> {
+  const res = await fetch("/api/wallet/create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${firebaseIdToken}`,
+    },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const message = body.detail
+      ? `Wallet creation failed: ${body.detail}`
+      : (body.error ?? "Failed to create wallet");
+    throw new Error(message);
+  }
+  const data = await res.json();
+  return data.public_address as string;
+}
+
+async function getServerWalletAddress(firebaseIdToken: string): Promise<string | null> {
+  const res = await fetch(`/api/wallet/address`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${firebaseIdToken}`,
+    },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return (data.public_address as string) ?? null;
+}
+
+// Resolve a Firebase user to an app User with Social ID + role + wallet address.
+async function resolveFirebaseUser(
   email: string,
   address: `0x${string}`,
-  didToken: string,
+  firebaseIdToken: string,
 ): Promise<User> {
+  // Check backend user directory
   try {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${didToken}`,
+        Authorization: `Bearer ${firebaseIdToken}`,
       },
       body: JSON.stringify({ email, address }),
     });
-    if (res.ok) return (await res.json()) as User;
+    if (res.ok) {
+      const u = (await res.json()) as User;
+      u.role = "employee"; // everyone has the same kasta/role
+      return u;
+    }
   } catch {
     /* fall through */
   }
+
+  // Fallback: match against seeded mock users by address
   const seeded = mockUsers.find(
     (u) => u.address.toLowerCase() === address.toLowerCase(),
   );
   return {
     socialId: seeded?.socialId ?? `@${email.split("@")[0] || "user"}`,
     address,
-    role: seeded?.role ?? "employee",
+    role: "employee",
   };
 }
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const { magic, web3 } = useMagic();
+  const {
+    firebaseUser,
+    firebaseLoading,
+    firebaseReady,
+    signIn: fbSignIn,
+    signUp: fbSignUp,
+    signOut: fbSignOut,
+    signInWithGoogle,
+    signInWithGithub,
+  } = useFirebaseAuth();
+
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // read the wallet address from Web3 (guide pattern), then resolve to an
-  // app User carrying Social ID + role.
-  const hydrateFromMagic = useCallback(async (): Promise<User | null> => {
-    if (!magic || !web3) return null;
-    const info = await magic.user.getInfo();
-    const token = await magic.user.getIdToken();
-    const accounts = await web3.eth.getAccounts();
-    const address = (accounts?.[0] ?? "0x") as `0x${string}`;
-    return resolveUser(info.email ?? "", address, token);
-  }, [magic, web3]);
-
-  // rehydrate an existing session on mount / when Magic becomes ready
+  // ── Hydrate from Firebase on mount / auth state change ───────────────────
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
-      if (magicEnabled) {
-        if (!magic || !web3) return; // wait for MagicProvider to init
-        try {
-          if (await magic.user.isLoggedIn()) {
-            const u = await hydrateFromMagic();
-            if (u && !cancelled) setUser(u);
+      if (firebaseReady) {
+        // Wait for Firebase to resolve auth state
+        if (firebaseLoading) return;
+
+        if (firebaseUser) {
+          try {
+            const token = await firebaseUser.getIdToken();
+            const email = firebaseUser.email ?? "";
+
+            // Try to get existing wallet, or create one
+            let address = await getServerWalletAddress(token);
+            if (!address) {
+              address = await createServerWallet(token);
+            }
+
+            const u = await resolveFirebaseUser(
+              email,
+              address as `0x${string}`,
+              token,
+            );
+            if (!cancelled) setUser(u);
+          } catch {
+            /* wallet fetch failed — user is authed but no wallet yet */
+            if (!cancelled) setUser(null);
           }
-        } catch {
-          /* not logged in */
+        } else {
+          if (!cancelled) setUser(null);
         }
         if (!cancelled) setLoading(false);
       } else {
+        // Mock mode — restore from sessionStorage
         const raw = sessionStorage.getItem(SS_KEY);
         if (raw && !cancelled) setUser(JSON.parse(raw) as User);
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [magic, web3, hydrateFromMagic]);
+  }, [firebaseUser, firebaseLoading, firebaseReady]);
 
+  // ── Login (Firebase email/password or mock socialId) ─────────────────────
   const login = useCallback(
-    async (mockSocialId?: string) => {
+    async (emailOrSocialId: string, password: string) => {
       setLoading(true);
       try {
-        if (magicEnabled) {
-          if (!magic) throw new Error("Magic not ready");
-          // built-in Magic Login UI — handles email OTP entry itself
-          await magic.wallet.connectWithUI();
-          const u = await hydrateFromMagic();
-          if (u) setUser(u);
+        if (firebaseReady) {
+          // Firebase sign-in → get JWT → resolve wallet
+          const fbUser = await fbSignIn(emailOrSocialId, password);
+          const token = await fbUser.getIdToken();
+          const email = fbUser.email ?? emailOrSocialId;
+
+          let address = await getServerWalletAddress(token);
+          if (!address) {
+            address = await createServerWallet(token);
+          }
+
+          const u = await resolveFirebaseUser(
+            email,
+            address as `0x${string}`,
+            token,
+          );
+          setUser(u);
         } else {
-          const seeded =
-            mockUsers.find((u) => u.socialId === mockSocialId) ?? mockUsers[0];
-          const u: User = { ...seeded, role: seeded.role as Role };
+          // Mock mode
+          const customUsersRaw = sessionStorage.getItem("arbor.custom_users");
+          const customUsers: User[] = customUsersRaw
+            ? JSON.parse(customUsersRaw)
+            : [];
+          const allUsers = [...mockUsers, ...customUsers];
+
+          const lookupId = emailOrSocialId.startsWith("@")
+            ? emailOrSocialId
+            : `@${emailOrSocialId}`;
+
+          let seeded = allUsers.find(
+            (u) =>
+              u.socialId.toLowerCase() === lookupId.toLowerCase() ||
+              u.socialId.toLowerCase() === emailOrSocialId.toLowerCase(),
+          );
+
+          if (!seeded && emailOrSocialId) {
+            const newMockUser: User = {
+              socialId: lookupId,
+              address: `0x${Array.from({ length: 40 }, () =>
+                Math.floor(Math.random() * 16).toString(16),
+              ).join("")}` as `0x${string}`,
+              role: "employee",
+            };
+            customUsers.push(newMockUser);
+            sessionStorage.setItem(
+              "arbor.custom_users",
+              JSON.stringify(customUsers),
+            );
+            seeded = newMockUser;
+          }
+
+          const finalUser = seeded ?? mockUsers[0];
+          const u: User = {
+            ...finalUser,
+            role: "employee",
+          };
+
           sessionStorage.setItem(SS_KEY, JSON.stringify(u));
           setUser(u);
         }
@@ -122,34 +234,165 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
       }
     },
-    [magic, hydrateFromMagic],
+    [firebaseReady, fbSignIn],
   );
 
+  // ── Login with Google (Firebase popup or mock simulation) ────────────────
   const loginWithGoogle = useCallback(async () => {
-    if (!magic) throw new Error("Magic not ready");
-    // redirects the browser to Google; control returns to /callback
-    await magic.oauth2.loginWithRedirect({
-      provider: "google",
-      redirectURI: `${window.location.origin}/callback`,
-    });
-  }, [magic]);
-
-  const finishOAuth = useCallback(async () => {
-    if (!magic) throw new Error("Magic not ready");
     setLoading(true);
     try {
-      await magic.oauth2.getRedirectResult(); // completes the OAuth handshake
-      const u = await hydrateFromMagic();
-      if (u) setUser(u);
+      if (firebaseReady) {
+        const fbUser = await signInWithGoogle();
+        const token = await fbUser.getIdToken();
+        const email = fbUser.email ?? "google-user@arbor.finance";
+
+        let address = await getServerWalletAddress(token);
+        if (!address) {
+          address = await createServerWallet(token);
+        }
+
+        const u = await resolveFirebaseUser(
+          email,
+          address as `0x${string}`,
+          token,
+        );
+        setUser(u);
+      } else {
+        // Mock mode
+        const customUsersRaw = sessionStorage.getItem("arbor.custom_users");
+        const customUsers: User[] = customUsersRaw
+          ? JSON.parse(customUsersRaw)
+          : [];
+        
+        const googleMockUser = {
+          socialId: "@google.budi",
+          address: "0x1a2B3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B" as `0x${string}`,
+          role: "employee" as const,
+        };
+
+        if (!customUsers.some(u => u.socialId === googleMockUser.socialId)) {
+          customUsers.push(googleMockUser);
+          sessionStorage.setItem("arbor.custom_users", JSON.stringify(customUsers));
+        }
+
+        sessionStorage.setItem(SS_KEY, JSON.stringify(googleMockUser));
+        setUser(googleMockUser);
+      }
     } finally {
       setLoading(false);
     }
-  }, [magic, hydrateFromMagic]);
+  }, [firebaseReady, signInWithGoogle]);
 
-  const logout = useCallback(async () => {
-    if (magicEnabled) {
+  // ── Login with GitHub (Firebase popup or mock simulation) ────────────────
+  const loginWithGithub = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (firebaseReady) {
+        const fbUser = await signInWithGithub();
+        const token = await fbUser.getIdToken();
+        const email = fbUser.email ?? fbUser.providerData[0]?.email ?? `${fbUser.uid}@github.com`;
+
+        let address = await getServerWalletAddress(token);
+        if (!address) {
+          address = await createServerWallet(token);
+        }
+
+        const u = await resolveFirebaseUser(
+          email,
+          address as `0x${string}`,
+          token,
+        );
+        setUser(u);
+      } else {
+        // Mock mode
+        const customUsersRaw = sessionStorage.getItem("arbor.custom_users");
+        const customUsers: User[] = customUsersRaw
+          ? JSON.parse(customUsersRaw)
+          : [];
+        
+        const githubMockUser = {
+          socialId: "@github.budi",
+          address: "0x2B3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c" as `0x${string}`,
+          role: "employee" as const,
+        };
+
+        if (!customUsers.some(u => u.socialId === githubMockUser.socialId)) {
+          customUsers.push(githubMockUser);
+          sessionStorage.setItem("arbor.custom_users", JSON.stringify(customUsers));
+        }
+
+        sessionStorage.setItem(SS_KEY, JSON.stringify(githubMockUser));
+        setUser(githubMockUser);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [firebaseReady, signInWithGithub]);
+
+  // ── Login with Telegram (Simulated for Demo) ─────────────────────────────
+  const loginWithTelegram = useCallback(async (username?: string) => {
+    setLoading(true);
+    try {
+      const tgUsername = username?.trim() || "tg_user";
+      const socialId = tgUsername.startsWith("@") ? tgUsername : `@${tgUsername}`;
+      
+      const tgMockUser: User = {
+        socialId,
+        address: `0x88${Array.from({ length: 38 }, () =>
+          Math.floor(Math.random() * 16).toString(16),
+        ).join("")}` as `0x${string}`,
+        role: "employee",
+      };
+
+      const customUsersRaw = sessionStorage.getItem("arbor.custom_users");
+      const customUsers: User[] = customUsersRaw ? JSON.parse(customUsersRaw) : [];
+      if (!customUsers.some(u => u.socialId.toLowerCase() === socialId.toLowerCase())) {
+        customUsers.push(tgMockUser);
+        sessionStorage.setItem("arbor.custom_users", JSON.stringify(customUsers));
+      }
+
+      sessionStorage.setItem(SS_KEY, JSON.stringify(tgMockUser));
+      setUser(tgMockUser);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Signup (Firebase create account + wallet, or mock dynamic register) ──
+  const signup = useCallback(
+    async (email: string, password: string) => {
+      setLoading(true);
       try {
-        await magic?.user.logout();
+        if (firebaseReady) {
+          // Create Firebase account → get JWT → create Magic Server Wallet
+          const fbUser = await fbSignUp(email, password);
+          const token = await fbUser.getIdToken();
+
+          const address = await createServerWallet(token);
+
+          const u: User = {
+            socialId: `@${email.split("@")[0] || "user"}`,
+            address: address as `0x${string}`,
+            role: "employee",
+          };
+
+          setUser(u);
+        } else {
+          // Mock mode: create a new user
+          await login(email, "");
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [firebaseReady, fbSignUp, login],
+  );
+
+  // ── Logout ───────────────────────────────────────────────────────────────
+  const logout = useCallback(async () => {
+    if (firebaseReady) {
+      try {
+        await fbSignOut();
       } catch {
         /* ignore */
       }
@@ -157,17 +400,19 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       sessionStorage.removeItem(SS_KEY);
     }
     setUser(null);
-  }, [magic]);
+  }, [firebaseReady, fbSignOut]);
 
   return (
     <UserContext.Provider
       value={{
         user,
         loading,
-        usingMagic: magicEnabled,
+        usingFirebase: firebaseReady,
         login,
         loginWithGoogle,
-        finishOAuth,
+        loginWithGithub,
+        loginWithTelegram,
+        signup,
         logout,
       }}
     >

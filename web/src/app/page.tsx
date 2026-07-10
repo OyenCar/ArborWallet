@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "next/navigation";
 import { useCurrency } from "@/lib/currency";
+import { useUser } from "@/app/context/UserContext";
 import {
   mockFundRequests,
   mockPartitions,
   mockTxs,
   mockVaultTotalWei,
 } from "@/lib/mock/data";
-import { formatDate } from "@/lib/format";
+import { formatDate, getArbitrumSepoliaBalance } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { BudgetDetailPanel } from "@/components/BudgetDetailPanel";
@@ -20,41 +21,112 @@ import type { Partition } from "@/lib/types";
 
 export default function Dashboard() {
   const { fmt } = useCurrency();
-  const pending = mockFundRequests.filter((r) => r.status === "pending");
-  const payroll = mockPartitions.find((p) => p.dueDate);
+  const { user, usingFirebase } = useUser();
+  
+  const [realBalance, setRealBalance] = useState<string>("0");
+  const [partitions, setPartitions] = useState<Partition[]>(mockPartitions);
   const [openPartition, setOpenPartition] = useState<Partition | null>(null);
+  
+  const pending = mockFundRequests.filter((r) => r.status === "pending");
+  const payroll = partitions.find((p) => p.dueDate);
   const drag = useDragScroll<HTMLDivElement>();
 
-  // budget cards rise in on mount, 40ms apart
+  // Fetch real testnet balance if using Firebase (live mode)
+  useEffect(() => {
+    if (!user) return;
+    
+    const address = user.address;
+    let active = true;
+    
+    async function fetchBalance() {
+      const balanceWei = await getArbitrumSepoliaBalance(address);
+      if (active) {
+        setRealBalance(balanceWei);
+      }
+    }
+    
+    fetchBalance();
+    
+    // Poll balance every 10 seconds
+    const interval = setInterval(fetchBalance, 10000);
+    
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [user]);
+
+  // Distribute real balance to partitions proportionally in live mode
+  useEffect(() => {
+    if (usingFirebase && realBalance !== "0") {
+      const totalWei = BigInt(realBalance);
+      const updated = mockPartitions.map((p, idx) => {
+        let pct = 15n;
+        if (idx === 0) pct = 15n; // Marketing
+        else if (idx === 1) pct = 50n; // Payroll
+        else if (idx === 2) pct = 20n; // Operations
+        else if (idx === 3) pct = 15n; // Reserve
+        
+        const balanceWei = (totalWei * pct) / 100n;
+        return {
+          ...p,
+          balanceWei: balanceWei.toString(),
+        };
+      });
+      setPartitions(updated);
+    } else {
+      setPartitions(mockPartitions);
+    }
+  }, [realBalance, usingFirebase]);
+
+  // Budget cards animation
   useEffect(() => {
     staggerIn(document.querySelectorAll("[data-budget-card]"));
-  }, []);
+  }, [partitions]);
+
+  const activeTotalWei = usingFirebase && realBalance !== "0" ? realBalance : mockVaultTotalWei;
 
   return (
     <div className="space-y-12">
-      {/* Hero — one dominant number */}
-      <section>
-        <p className="text-sm font-medium uppercase tracking-wide text-muted">
-          Company Treasury
-        </p>
-        <h1 className="mt-2 text-6xl font-extrabold tracking-tight md:text-7xl">
-          <AnimatedAmount wei={mockVaultTotalWei} />
-        </h1>
+      {/* Hero — real testnet balance display */}
+      <section className="relative">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-wide text-muted">
+              Company Treasury {usingFirebase && "(Arbitrum Sepolia Testnet)"}
+            </p>
+            <h1 className="mt-2 text-6xl font-extrabold tracking-tight md:text-7xl">
+              <AnimatedAmount wei={activeTotalWei} />
+            </h1>
+          </div>
+          
+          {usingFirebase && (
+            <a
+              href="https://faucet.quicknode.com/drip"
+              target="_blank"
+              rel="noreferrer"
+              className="border-2 border-line bg-accent px-4 py-2 text-xs font-bold uppercase shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-shift"
+            >
+              ⛽ Get Testnet ETH Faucet
+            </a>
+          )}
+        </div>
+
         <div className="mt-6 flex gap-3">
           <Button variant="primary">Create Budget</Button>
           <Button>Transfer Funds</Button>
         </div>
       </section>
 
-      {/* Budgets — horizontal scroll-snap rail, click for detail panel */}
+      {/* Budgets — horizontal scroll-snap rail */}
       <section>
         <div className="mb-4 flex items-baseline justify-between">
           <h2 className="text-3xl font-bold">Budgets</h2>
           <div className="flex items-center gap-3">
             <span className="font-mono text-xs text-muted">drag / scroll →</span>
-            <Link href="/budgets" className="text-sm text-accent-text underline underline-offset-4">
+            <a href="/budgets" className="text-sm text-accent-text underline underline-offset-4">
               View all
-            </Link>
+            </a>
           </div>
         </div>
         <div className="relative">
@@ -62,7 +134,7 @@ export default function Dashboard() {
             {...drag}
             className="scrollbar-hide -mx-6 flex cursor-grab snap-x snap-proximity gap-4 overflow-x-auto px-6 pb-2 select-none active:cursor-grabbing"
           >
-            {mockPartitions.map((p) => (
+            {partitions.map((p) => (
               <button
                 key={p.id}
                 data-budget-card
@@ -80,7 +152,7 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
-          {/* right-edge fade — signals more cards off-screen */}
+          {/* right-edge fade */}
           <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-bg to-transparent" />
         </div>
       </section>
@@ -147,9 +219,9 @@ export default function Dashboard() {
       <section>
         <div className="mb-4 flex items-baseline justify-between">
           <h2 className="text-3xl font-bold">Recent Activity</h2>
-          <Link href="/activity" className="text-sm text-accent-text underline underline-offset-4">
+          <a href="/activity" className="text-sm text-accent-text underline underline-offset-4">
             Full report
-          </Link>
+          </a>
         </div>
         <div className="border-2 border-line bg-surface shadow-hard">
           {mockTxs.slice(0, 4).map((t) => (

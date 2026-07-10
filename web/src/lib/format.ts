@@ -34,3 +34,29 @@ export function formatDate(iso: string): string {
     minute: "2-digit",
   });
 }
+
+export async function getArbitrumSepoliaBalance(address: string): Promise<string> {
+  try {
+    const res = await fetch("https://sepolia-rollup.arbitrum.io/rpc", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getBalance",
+        params: [address, "latest"],
+        id: 1,
+      }),
+    });
+    if (!res.ok) return "0";
+    const data = await res.json();
+    if (data.result) {
+      const bigIntValue = BigInt(data.result);
+      return bigIntValue.toString();
+    }
+  } catch (err) {
+    console.error("Failed to fetch balance from RPC:", err);
+  }
+  return "0";
+}
