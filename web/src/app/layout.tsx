@@ -3,6 +3,8 @@ import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { CurrencyProvider } from "@/lib/currency";
 import { Nav } from "@/components/Nav";
+import MagicProvider from "./context/MagicProvider";
+import { UserProvider } from "./context/UserContext";
 import { Providers } from "@/components/Providers";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -19,15 +21,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={`${geist.variable} ${jetbrains.variable} antialiased`}>
         <Providers>
-          <CurrencyProvider>
-            <Nav />
-            <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
-          </CurrencyProvider>
+          <MagicProvider>
+            <UserProvider>
+              <CurrencyProvider>
+                <Nav />
+                <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+              </CurrencyProvider>
+            </UserProvider>
+          </MagicProvider>
         </Providers>
       </body>
     </html>

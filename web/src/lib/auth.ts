@@ -12,6 +12,13 @@ export interface AuthContext {
   address: string;
 }
 
+export interface MagicOnlyContext {
+  userId: bigint;
+  magicIssuer: string;
+  socialId?: string;
+  address?: string;
+}
+
 /**
  * Verify Magic token and get auth context
  * Call this at the start of protected API routes
@@ -68,6 +75,53 @@ export async function verifyMagicToken(
       socialId: user.socialId,
       magicIssuer: user.magicIssuer,
       address: address.address,
+    };
+  } catch (error) {
+    console.error("[Auth] Token verification failed:", error);
+    return null;
+  }
+}
+
+export async function verifyMagicTokenNoSocial(
+  request: NextRequest,
+): Promise<MagicOnlyContext | null> {
+  try {
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return null;
+    }
+
+    const token = authHeader.slice(7);
+
+    await magic.token.validate(token);
+
+    const metadata = await magic.users.getMetadataByToken(token);
+    const issuer = metadata?.issuer;
+    if (!issuer) {
+      return null;
+    }
+
+    let user = await db.user.findUnique({
+      where: { magicIssuer: issuer },
+    });
+
+    if (!user) {
+      user = await db.user.create({
+        data: {
+          magicIssuer: issuer,
+        },
+      });
+    }
+
+    const address =
+      user.socialId &&
+      (await db.address.findUnique({ where: { socialId: user.socialId } }));
+
+    return {
+      userId: user.id,
+      magicIssuer: user.magicIssuer,
+      socialId: user.socialId ?? undefined,
+      address: address?.address,
     };
   } catch (error) {
     console.error("[Auth] Token verification failed:", error);

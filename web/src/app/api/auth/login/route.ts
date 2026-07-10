@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     });
 
     let requiresSocialLink = false;
+    let storedAddress = null;
 
     if (!user) {
       user = await db.user.create({
@@ -50,12 +51,18 @@ export async function POST(request: NextRequest) {
       requiresSocialLink = true;
     } else if (!user.socialId) {
       requiresSocialLink = true;
+    } else {
+      const addressRecord = await db.address.findUnique({
+        where: { socialId: user.socialId },
+      });
+      storedAddress = addressRecord?.address ?? null;
     }
 
     return NextResponse.json({
       userId: user.id.toString(), // Convert bigint to string for JSON
       magicIssuer: user.magicIssuer,
       socialId: user.socialId,
+      address: storedAddress,
       requiresSocialLink,
     });
   } catch (error) {

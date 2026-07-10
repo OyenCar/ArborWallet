@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyMagicToken } from "@/lib/auth";
+import { verifyMagicTokenNoSocial } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 /**
@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
  */
 export async function POST(request: NextRequest) {
   try {
-    const auth = await verifyMagicToken(request);
+    const auth = await verifyMagicTokenNoSocial(request);
 
     if (!auth) {
       return NextResponse.json(

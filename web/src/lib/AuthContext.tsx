@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+"use client";
+
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import type { AuthContext } from "@/lib/auth";
 
 interface AuthState extends AuthContext {
@@ -9,7 +11,7 @@ interface AuthContextType {
   auth: AuthState | null;
   isLoading: boolean;
   login: (token: string) => Promise<void>;
-  linkSocialId: (socialId: string, address: string) => Promise<void>;
+  linkSocialId: (socialId: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -40,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userId: BigInt(data.userId),
         socialId: data.socialId,
         magicIssuer: data.magicIssuer,
-        address: "",
+        address: data.address ?? "",
       });
 
       // Store token in localStorage for persistence
@@ -52,7 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const linkSocialId = useCallback(
     async (socialId: string, address: string) => {
-      if (!auth) {
+      const token = auth?.token ?? localStorage.getItem("auth_token");
+      if (!token) {
         throw new Error("Not authenticated");
       }
 
@@ -62,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ socialId, address }),
         });
@@ -72,9 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error(error.error || "Failed to link social ID");
         }
 
-        // Update auth state with social ID
+        const data = await res.json();
+
         setAuth((prev) =>
-          prev ? { ...prev, socialId } : null
+          prev
+            ? { ...prev, socialId: data.socialId, address }
+            : null
         );
       } finally {
         setIsLoading(false);
@@ -87,6 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuth(null);
     localStorage.removeItem("auth_token");
   }, []);
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem("auth_token");
+    if (!storedToken) return;
+
+    login(storedToken).catch(() => {
+      localStorage.removeItem("auth_token");
+    });
+  }, [login]);
 
   return (
     <AuthCtx.Provider value={{ auth, isLoading, login, linkSocialId, logout }}>

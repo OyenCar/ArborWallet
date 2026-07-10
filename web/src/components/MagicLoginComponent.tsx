@@ -9,20 +9,16 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
-import { Magic } from "magic-sdk";
+import { useState } from "react";
+import { useMagic } from "@/app/context/MagicProvider";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/Button";
 
 export function MagicLoginComponent() {
   const { login, linkSocialId, isLoading, auth } = useAuth();
+  const { magic, web3 } = useMagic();
   const [email, setEmail] = useState("");
   const [socialId, setSocialId] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
-  const magic = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    return new Magic(process.env.NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY!);
-  }, []);
 
   const handleMagicLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,20 +50,60 @@ export function MagicLoginComponent() {
     }
   };
 
+  const getWalletAddress = async () => {
+    if (!magic) {
+      return null;
+    }
+
+    const metadata = await magic.user.getInfo();
+    if (metadata.publicAddress) {
+      return metadata.publicAddress;
+    }
+
+    if (web3) {
+      const accounts = await web3.eth.getAccounts();
+      if (accounts?.length) {
+        return accounts[0];
+      }
+    }
+
+    try {
+      await magic.wallet.connectWithUI();
+      if (web3) {
+        const accounts = await web3.eth.getAccounts();
+        return accounts?.[0] ?? null;
+      }
+    } catch (error) {
+      console.error("Wallet connect fallback failed:", error);
+    }
+
+    return null;
+  };
+
   const handleSocialLink = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!socialId || !walletAddress) {
-      alert("Please fill in both fields");
+    if (!socialId) {
+      alert("Please fill in your Social ID.");
+      return;
+    }
+
+    if (!magic) {
+      alert("Magic SDK is not ready. Refresh the page and try again.");
       return;
     }
 
     try {
-      await linkSocialId(socialId, walletAddress);
+      const publicAddress = await getWalletAddress();
+
+      if (!publicAddress) {
+        throw new Error("Unable to read wallet address from Magic");
+      }
+
+      await linkSocialId(socialId, publicAddress);
       alert("Social ID linked successfully!");
       setEmail("");
       setSocialId("");
-      setWalletAddress("");
     } catch (error) {
       console.error("Social linking failed:", error);
       alert("Failed to link social ID. Check console for details.");
@@ -79,7 +115,7 @@ export function MagicLoginComponent() {
       <div className="max-w-md mx-auto p-6 border rounded">
         <h2 className="text-xl font-bold mb-4">Link Social ID</h2>
         <form onSubmit={handleSocialLink} className="space-y-4">
-          <div>
+              <div>
             <label className="block text-sm font-medium mb-2">
               Social ID (e.g., @alice)
             </label>
@@ -88,21 +124,6 @@ export function MagicLoginComponent() {
               value={socialId}
               onChange={(e) => setSocialId(e.target.value)}
               placeholder="@username"
-              className="w-full px-3 py-2 border rounded"
-              disabled={isLoading}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Wallet Address
-            </label>
-            <input
-              type="text"
-              value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
-              placeholder="0x..."
               className="w-full px-3 py-2 border rounded"
               disabled={isLoading}
               required
@@ -129,7 +150,7 @@ export function MagicLoginComponent() {
           Social ID: <strong>{auth.socialId}</strong>
         </p>
         <p className="text-sm text-gray-600">
-          Address: {auth.address.slice(0, 10)}...
+          Address: {auth.address ? `${auth.address.slice(0, 10)}...` : "Not available"}
         </p>
       </div>
     );
