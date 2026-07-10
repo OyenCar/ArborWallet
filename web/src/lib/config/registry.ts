@@ -8,8 +8,8 @@ import {
   ProviderRole,
 } from "./schema";
 import { getProvider } from "./providers";
-import { chainMap, getChainDefinition } from "./chains";
-import { environmentProfiles, assertProfileIsolation } from "./environments";
+import { getChainDefinition } from "./chains";
+import { environmentProfiles, assertProfileIsolation, resolveProfileChains } from "./environments";
 
 const DEFAULT_PROFILE: EnvironmentProfile["name"] = "testnet";
 
@@ -27,9 +27,7 @@ export function getChain(key: ChainKey): ChainDefinition {
 }
 
 export function activeChains(): ChainDefinition[] {
-  const profile = getActiveProfile();
-  assertProfileIsolation(profile);
-  return profile.activeChainKeys.map((k) => chainMap.get(k)!);
+  return resolveProfileChains(getActiveProfile());
 }
 
 export function getChainCapability(key: ChainKey): ChainCapability {
