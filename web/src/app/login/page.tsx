@@ -174,6 +174,18 @@ function LoginInner() {
     }
   }
 
+  async function connectGoogle() {
+    setBusy(true);
+    setError(null);
+    try {
+      // redirects to Google; returns to /callback (no code runs after this)
+      await loginWithGoogle();
+    } catch {
+      setError("Could not start Google sign-in. Try again.");
+      setBusy(false);
+    }
+  }
+
   async function submitMock(socialId: string) {
     setBusy(true);
     setError(null);
