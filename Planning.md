@@ -1226,9 +1226,9 @@ SPEC.md) but the app largely runs on mocks.
    greenfield adoption, not a data migration — the Postgres schema in SPEC.md
    is superseded. Update SPEC.md/CLAUDE.md references when implementation
    starts.
-4. **Multi-family provisioning.** Extend provisioning to SOL/BTC (after the
-   Magic TEE support verification spike — §22.4). Wallet docs, portfolio
-   pipeline, dashboard aggregation.
+4. **Multi-family provisioning.** Extend provisioning to SOL/BTC (Magic TEE
+   support verified — §22.4). Wallet docs, portfolio pipeline, dashboard
+   aggregation.
 5. **Identity-based vault membership.** Introduce `vault_memberships` +
    WalletResolver + MembershipReconciler; existing whitelisted addresses are
    backfilled into membership docs (`syncState: synced`) — a metadata import,
@@ -1290,12 +1290,24 @@ coverage. If either fails: testnet profile uses native-RPC execution only
 bridge aggregator behind the same ExecutionPort. Vendor risk is real but
 contained to one adapter.
 
-### 22.4 Custody concentration & Magic TEE ✋
+### 22.4 Custody concentration & Magic TEE
 
-- **Magic TEE multi-chain support (BTC/SOL via `X-Magic-Chain`) is unverified.**
-  Gate: verification spike before Phase 4 of §21. If unsupported, the family's
-  custody routes to another provider (Privy/Dynamic) via ProviderRegistry —
-  the architecture holds, launch chain set may stagger.
+- **Magic TEE multi-chain support (BTC/SOL via `X-Magic-Chain`) — ✅ verified
+  2026-07-11.** Magic's Server Wallets Express API docs
+  (`docs.magic.link/server-wallets/express-api/wallet-operations`) confirm
+  `X-Magic-Chain` accepts exactly `ETH`, `SOL`, `BTC`, consistently across
+  Get/Create Wallet, Sign Data, and Sign Message — no beta labels or
+  per-operation caveats documented for BTC/SOL. Bonus finding: **Sign EIP-7702
+  Authorization is a distinct, first-class listed operation** on this same
+  API, independently validating the §10 smart-wallet design — Magic's own
+  server wallet can sign the 7702 delegation directly, no separate signer
+  hand-off needed. This closes the gate for Phase 4 of §21 (multi-family
+  wallet provisioning): BTC/SOL provisioning may proceed on Magic as the
+  wallet provider, no ProviderRegistry fallback required at launch.
+  Caveat: this is documentation-level confirmation, not a live authenticated
+  API call (no test credentials available at planning time) — treat as
+  sufficient to unblock implementation, with the first real Phase 4
+  `WalletPort.provision()` call against BTC/SOL serving as the live check.
 - **Magic outage = no signing, app-wide.** No hot fallback exists for custody
   (keys are *in* their enclave). Mitigations: provider health surfaced in
   `provider_runtime`, honest degraded-mode UX (balances readable, sends
