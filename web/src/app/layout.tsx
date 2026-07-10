@@ -13,13 +13,9 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Arbor — Corporate Treasury",
+  title: "ArborWallet — Corporate Treasury",
   description:
     "Programmable budgets, instant settlement, full control. Treasury software for modern companies.",
-    icons: {
-      icon: "/Arbor.jpeg",
-      shortcut: "/Arbor.jpeg",
-    }
 };
 
 export default function RootLayout({

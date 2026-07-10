@@ -1,4 +1,3 @@
-// src/app/context/FirebaseProvider.tsx
 "use client";
 
 import {
@@ -15,7 +14,6 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   GoogleAuthProvider,
-  GithubAuthProvider,
   signInWithPopup,
   type User as FirebaseUser,
 } from "firebase/auth";
@@ -34,8 +32,6 @@ interface FirebaseAuthContextType {
   signUp: (email: string, password: string) => Promise<FirebaseUser>;
   /** Sign in with Google provider */
   signInWithGoogle: () => Promise<FirebaseUser>;
-  /** Sign in with GitHub provider */
-  signInWithGithub: () => Promise<FirebaseUser>;
   /** Sign out the current Firebase user */
   signOut: () => Promise<void>;
   /** Get the current user's Firebase ID Token (JWT) for backend calls */
@@ -49,7 +45,6 @@ const FirebaseAuthContext = createContext<FirebaseAuthContextType>({
   signIn: () => Promise.reject(new Error("FirebaseProvider not mounted")),
   signUp: () => Promise.reject(new Error("FirebaseProvider not mounted")),
   signInWithGoogle: () => Promise.reject(new Error("FirebaseProvider not mounted")),
-  signInWithGithub: () => Promise.reject(new Error("FirebaseProvider not mounted")),
   signOut: () => Promise.reject(new Error("FirebaseProvider not mounted")),
   getIdToken: () => Promise.resolve(null),
 });
@@ -97,12 +92,6 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     return cred.user;
   }, []);
 
-  const signInWithGithub = useCallback(async (): Promise<FirebaseUser> => {
-    const provider = new GithubAuthProvider();
-    const cred = await signInWithPopup(auth, provider);
-    return cred.user;
-  }, []);
-
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
   }, []);
@@ -121,7 +110,6 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
         signIn,
         signUp,
         signInWithGoogle,
-        signInWithGithub,
         signOut,
         getIdToken,
       }}

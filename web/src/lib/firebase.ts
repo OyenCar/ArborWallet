@@ -1,7 +1,3 @@
-// src/lib/firebase.ts
-// Firebase initialization — single shared instance for the entire app.
-// Only imported client-side (guarded by "use client" in consumers).
-
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getAuth,
@@ -23,7 +19,6 @@ const auth: Auth = getAuth(app);
 
 export { app, auth };
 
-/** True when all required Firebase env vars are set */
 export const firebaseEnabled = Boolean(
   process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,

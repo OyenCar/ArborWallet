@@ -31,20 +31,12 @@ retains full control.
 Blockchain provides auditability, automation, instant settlement, and
 programmable permissions. Users never need to understand blockchain.
 
-## Personas
+## Equality of Users (No Caste System)
 
-**1. Finance Manager / CFO / Founder (primary).** Runs payroll, approves
-expenses, controls budgets, needs visibility. Does not care about blockchain.
-Asks: How much budget remains? Who spent money? Which department exceeded
-limits? Can I revoke access immediately? Did payroll execute?
-Success = everything understandable in under 5 seconds.
-
-**2. Employee.** Needs company funds, uploads invoices, pays vendors. Never
-manages private keys, never changes networks, never worries about gas.
-Success = "Getting company money feels like using Apple Pay."
-
-**3. Merchant.** Shows a QR or scans one, receives payment, leaves. Nothing
-else. No account, no onboarding.
+Unlike traditional platforms with strict hierarchies or "CFO vs Employee" castes:
+- All users have equal status.
+- Every user can view the corporate treasury, create partitions, request/approve transfers, configure automations, and manage Settings.
+- Under the hood, users default to a unified role (`"employee"`) to maintain seamless permission alignment.
 
 ## Product Personality
 
@@ -91,7 +83,7 @@ NOT: Wallet, Gas, Networks, Tokens, Signatures, Contracts.
 Calm. Large whitespace. One dominant number; everything else supports it.
 
 ```
-Company Treasury
+Company Treasury (Arbitrum Sepolia Testnet)
 $482,350.24        [⇄ ETH]
 
 ────────────────────────
@@ -107,11 +99,10 @@ Recent Activity
 
 Eye travel: Headline → Budgets → Primary Action → Activity → Secondary info.
 
-### Currency display
+### Currency display & Blockchain Balance
 
 Fiat by default, **one-tap toggle to ETH** next to every major balance.
-On-chain values stay wei; conversion is display-only via a backend-cached
-price feed. The toggle is global (persists across screens).
+Balances are pulled dynamically from the **Arbitrum Sepolia Testnet** RPC. A link/button to **Get Testnet ETH Faucet** is available to fund testnet wallets and watch values scale in real-time.
 
 ## Visual Hierarchy
 
@@ -152,15 +143,13 @@ no excessive illustrations.
 
 - **Buttons:** rectangle, 2px border, hard shadow, minimal radius. Hover =
   shadow shifts. No glow.
+- **Social Auth Buttons:** Round/circular (`rounded-full`) horizontal group with custom SVGs for Google, GitHub, and Telegram.
 - **Cards:** generous padding, simple, don't over-segment.
 - **Tables:** Stripe-like — readable, minimal gridlines, excellent spacing.
 - **Status chips:** Permission Granted · Pending Approval · Expired · Paid ·
   Rejected. Small, never oversized.
 
 ## Motion
-
-Motion communicates state, never decoration. Under 250 ms. No bouncing, no
-elastic easing.
 
 - Budget increases → count animation
 - Payment success → card expands
@@ -171,39 +160,32 @@ elastic easing.
 
 ### 1. Dashboard
 Understand company financial health in 5 seconds. Treasury balance (fiat/ETH
-toggle), department budgets, pending approvals, upcoming payroll, recent
+toggle, Arbitrum Sepolia RPC balance), department budgets (distributed proportionally), pending approvals, upcoming payroll, recent
 activity. Primary CTAs: Create Budget, Transfer Funds.
 
 ### 2. Budget Detail
 Remaining funds, assigned employees, monthly limit, recent payments, quick
 actions.
 
-### 3. Withdraw Funds (employee)
+### 3. Withdraw Funds
 Select budget → amount → invoice upload → permission check → review → success.
 Should feel like Apple Pay, not MetaMask.
 
-### 4a. Pay a Merchant — scan-to-pay (employee)
+### 4a. Pay a Merchant — scan-to-pay
 Employee opens camera in-app, scans the merchant's static address QR
 (EIP-681), amount + invoice attach, confirm, done. Merchant needs no account —
-they just display their QR (any wallet address; Magic login on the spot if
-they have none).
+they just display their QR.
 
-### 4b. Request-to-claim QR (employee generates)
+### 4b. Request-to-claim QR
 Employee generates a payment-request QR: large QR, clear amount, visible
 countdown (intent expiry). Payee scans → minimal claim page → supplies or
-connects a receiving address → confirmation. Claim page carries the same
-design system but zero navigation — single purpose, single action.
+connects a receiving address → confirmation.
 
 ### 5. Activity
-Beautiful table, human readable — not a blockchain explorer. Columns: Time,
-Employee, Department, Description, Amount, Status. Hidden expandable row:
-transaction hash, network, IPFS invoice (part of the View Infrastructure
-pattern).
+Beautiful table, human readable. Columns: Time, Employee, Department, Description, Amount, Status.
 
-### 6. Company Settings
-Budget management, employee permissions, spending limits, automation, payroll
-schedules, emergency freeze. Everything operational, nothing
-blockchain-heavy.
+### 6. Settings
+Displays public address (with copy functionality), real-time Testnet Wallet Balance, and private key status (TEE Enclave Secured note or mock reveal).
 
 ## Tone of Voice
 

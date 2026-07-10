@@ -10,7 +10,6 @@ import {
   type ReactNode,
 } from "react";
 import { useFirebaseAuth } from "./FirebaseProvider";
-import { firebaseEnabled } from "@/lib/firebase";
 import { mockUsers } from "@/lib/mock/data";
 import type { User } from "@/lib/types";
 
@@ -23,10 +22,6 @@ interface UserContextType {
   login: (email: string, password: string) => Promise<void>;
   /** Google sign-in: authentication via Google popup. */
   loginWithGoogle: () => Promise<void>;
-  /** GitHub sign-in: authentication via GitHub popup. */
-  loginWithGithub: () => Promise<void>;
-  /** Telegram sign-in: authentication via Telegram (simulated for demo). */
-  loginWithTelegram: (username?: string) => Promise<void>;
   /** Firebase sign-up: create account + create wallet. Mock: register dynamically. */
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -112,7 +107,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     signUp: fbSignUp,
     signOut: fbSignOut,
     signInWithGoogle,
-    signInWithGithub,
   } = useFirebaseAuth();
 
   const [user, setUser] = useState<User | null>(null);
@@ -143,7 +137,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
               address as `0x${string}`,
               token,
             );
-            if (!cancelled) setUser(u);
+            if (!cancelled) {
+              setUser(u);
+            }
           } catch {
             /* wallet fetch failed — user is authed but no wallet yet */
             if (!cancelled) setUser(null);
@@ -283,81 +279,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [firebaseReady, signInWithGoogle]);
 
-  // ── Login with GitHub (Firebase popup or mock simulation) ────────────────
-  const loginWithGithub = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (firebaseReady) {
-        const fbUser = await signInWithGithub();
-        const token = await fbUser.getIdToken();
-        const email = fbUser.email ?? fbUser.providerData[0]?.email ?? `${fbUser.uid}@github.com`;
-
-        let address = await getServerWalletAddress(token);
-        if (!address) {
-          address = await createServerWallet(token);
-        }
-
-        const u = await resolveFirebaseUser(
-          email,
-          address as `0x${string}`,
-          token,
-        );
-        setUser(u);
-      } else {
-        // Mock mode
-        const customUsersRaw = sessionStorage.getItem("arbor.custom_users");
-        const customUsers: User[] = customUsersRaw
-          ? JSON.parse(customUsersRaw)
-          : [];
-        
-        const githubMockUser = {
-          socialId: "@github.budi",
-          address: "0x2B3c4D5e6F7a8B9c0D1e2F3a4B5c6D7e8F9a0B1c" as `0x${string}`,
-          role: "employee" as const,
-        };
-
-        if (!customUsers.some(u => u.socialId === githubMockUser.socialId)) {
-          customUsers.push(githubMockUser);
-          sessionStorage.setItem("arbor.custom_users", JSON.stringify(customUsers));
-        }
-
-        sessionStorage.setItem(SS_KEY, JSON.stringify(githubMockUser));
-        setUser(githubMockUser);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [firebaseReady, signInWithGithub]);
-
-  // ── Login with Telegram (Simulated for Demo) ─────────────────────────────
-  const loginWithTelegram = useCallback(async (username?: string) => {
-    setLoading(true);
-    try {
-      const tgUsername = username?.trim() || "tg_user";
-      const socialId = tgUsername.startsWith("@") ? tgUsername : `@${tgUsername}`;
-      
-      const tgMockUser: User = {
-        socialId,
-        address: `0x88${Array.from({ length: 38 }, () =>
-          Math.floor(Math.random() * 16).toString(16),
-        ).join("")}` as `0x${string}`,
-        role: "employee",
-      };
-
-      const customUsersRaw = sessionStorage.getItem("arbor.custom_users");
-      const customUsers: User[] = customUsersRaw ? JSON.parse(customUsersRaw) : [];
-      if (!customUsers.some(u => u.socialId.toLowerCase() === socialId.toLowerCase())) {
-        customUsers.push(tgMockUser);
-        sessionStorage.setItem("arbor.custom_users", JSON.stringify(customUsers));
-      }
-
-      sessionStorage.setItem(SS_KEY, JSON.stringify(tgMockUser));
-      setUser(tgMockUser);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // ── Signup (Firebase create account + wallet, or mock dynamic register) ──
   const signup = useCallback(
     async (email: string, password: string) => {
@@ -396,6 +317,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       } catch {
         /* ignore */
       }
+      sessionStorage.removeItem(SS_KEY);
     } else {
       sessionStorage.removeItem(SS_KEY);
     }
@@ -410,8 +332,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         usingFirebase: firebaseReady,
         login,
         loginWithGoogle,
-        loginWithGithub,
-        loginWithTelegram,
         signup,
         logout,
       }}

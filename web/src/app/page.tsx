@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/navigation";
 import { useCurrency } from "@/lib/currency";
 import { useUser } from "@/app/context/UserContext";
 import {

@@ -47,7 +47,6 @@ export async function POST(req: Request) {
     }
 
     const data = await res.json();
-    // data should contain { public_address, wallet_type }
     return NextResponse.json({
       public_address: data.public_address,
       wallet_type: data.wallet_type,

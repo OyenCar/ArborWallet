@@ -23,8 +23,6 @@ function LoginInner() {
     login,
     signup,
     loginWithGoogle,
-    loginWithGithub,
-    loginWithTelegram,
   } = useUser();
   
   const router = useRouter();
@@ -34,9 +32,6 @@ function LoginInner() {
   const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  
-  const [showTgModal, setShowTgModal] = useState(false);
-  const [tgUsername, setTgUsername] = useState("");
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,56 +127,6 @@ function LoginInner() {
           : "Google authentication failed. Please try again."
       );
     } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleGithubLogin() {
-    setBusy(true);
-    setError(null);
-    try {
-      await loginWithGithub();
-      router.replace(next);
-    } catch (err: unknown) {
-      console.error(err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "GitHub authentication failed. Please try again."
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleTelegramSubmit() {
-    if (!tgUsername.trim()) {
-      setError("Please enter your Telegram username.");
-      setShowTgModal(false);
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    setShowTgModal(false);
-    try {
-      await loginWithTelegram(tgUsername);
-      router.replace(next);
-    } catch (err: unknown) {
-      console.error(err);
-      setError("Telegram connection failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function connectGoogle() {
-    setBusy(true);
-    setError(null);
-    try {
-      // redirects to Google; returns to /callback (no code runs after this)
-      await loginWithGoogle();
-    } catch {
-      setError("Could not start Google sign-in. Try again.");
       setBusy(false);
     }
   }
@@ -340,32 +285,6 @@ function LoginInner() {
                         />
                       </svg>
                     </button>
-
-                    {/* GitHub Button */}
-                    <button
-                      type="button"
-                      onClick={handleGithubLogin}
-                      disabled={busy}
-                      title="GitHub"
-                      className="w-12 h-12 rounded-full border-2 border-line bg-surface flex items-center justify-center shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-shift disabled:opacity-50 cursor-pointer"
-                    >
-                      <svg className="w-5.5 h-5.5 text-ink" fill="currentColor" viewBox="0 0 24 24">
-                        <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                      </svg>
-                    </button>
-
-                    {/* Telegram Button */}
-                    <button
-                      type="button"
-                      onClick={() => setShowTgModal(true)}
-                      disabled={busy}
-                      title="Telegram"
-                      className="w-12 h-12 rounded-full border-2 border-line bg-surface flex items-center justify-center shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-shift disabled:opacity-50 cursor-pointer"
-                    >
-                      <svg className="w-5.5 h-5.5 text-[#229ED9]" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.98 1.25-5.59 3.69-.53.36-1 .53-1.42.52-.46-.01-1.35-.26-2.01-.48-.81-.27-1.46-.42-1.4-.88.03-.24.36-.49.99-.74 3.87-1.68 6.45-2.79 7.74-3.33 3.69-1.54 4.45-1.81 4.95-1.82.11 0 .36.03.52.16.14.11.18.26.2.37.02.13.03.36.01.52z"/>
-                      </svg>
-                    </button>
                   </div>
                 </>
               )}
@@ -494,32 +413,6 @@ function LoginInner() {
                         />
                       </svg>
                     </button>
-
-                    {/* GitHub Button */}
-                    <button
-                      type="button"
-                      onClick={handleGithubLogin}
-                      disabled={busy}
-                      title="GitHub"
-                      className="w-12 h-12 rounded-full border-2 border-line bg-surface flex items-center justify-center shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-shift disabled:opacity-50 cursor-pointer"
-                    >
-                      <svg className="w-5.5 h-5.5 text-ink" fill="currentColor" viewBox="0 0 24 24">
-                        <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                      </svg>
-                    </button>
-
-                    {/* Telegram Button */}
-                    <button
-                      type="button"
-                      onClick={() => setShowTgModal(true)}
-                      disabled={busy}
-                      title="Telegram"
-                      className="w-12 h-12 rounded-full border-2 border-line bg-surface flex items-center justify-center shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-shift disabled:opacity-50 cursor-pointer"
-                    >
-                      <svg className="w-5.5 h-5.5 text-[#229ED9]" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.98 1.25-5.59 3.69-.53.36-1 .53-1.42.52-.46-.01-1.35-.26-2.01-.48-.81-.27-1.46-.42-1.4-.88.03-.24.36-.49.99-.74 3.87-1.68 6.45-2.79 7.74-3.33 3.69-1.54 4.45-1.81 4.95-1.82.11 0 .36.03.52.16.14.11.18.26.2.37.02.13.03.36.01.52z"/>
-                      </svg>
-                    </button>
                   </div>
                 </>
               )}
@@ -538,53 +431,6 @@ function LoginInner() {
           </form>
         )}
       </div>
-
-      {/* Telegram User Entry Modal */}
-      {showTgModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-sm p-4">
-          <div className="border-2 border-line bg-surface p-6 shadow-hard w-full max-w-sm space-y-4">
-            <div className="flex justify-between items-center border-b-2 border-line pb-2">
-              <h3 className="font-bold text-lg text-ink">Connect Telegram</h3>
-              <button
-                type="button"
-                onClick={() => setShowTgModal(false)}
-                className="text-muted hover:text-ink font-bold font-mono cursor-pointer"
-              >
-                [X]
-              </button>
-            </div>
-            <p className="text-xs text-muted">
-              Enter your Telegram handle. We will generate a secure wallet associated with your Telegram account.
-            </p>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase text-ink">Telegram Username</label>
-              <input
-                type="text"
-                value={tgUsername}
-                onChange={(e) => setTgUsername(e.target.value)}
-                placeholder="e.g. @username"
-                className="w-full border-2 border-line bg-surface px-4 py-2.5 font-mono text-sm focus:outline-none focus:bg-bg focus:ring-2 focus:ring-accent shadow-hard-sm"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowTgModal(false)}
-                className="flex-1 border-2 border-line bg-surface py-2 text-sm font-semibold hover:bg-bg cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleTelegramSubmit}
-                className="flex-1 border-2 border-line bg-accent text-ink py-2 text-sm font-semibold shadow-hard-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-shift cursor-pointer"
-              >
-                Connect
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
