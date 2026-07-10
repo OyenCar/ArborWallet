@@ -28,8 +28,9 @@ export function Nav() {
   return (
     <header className="border-b-2 border-line bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-2 px-6 py-4">
-        <Link href="/" className="flex min-h-11 items-center text-lg font-extrabold tracking-tight">
-          ArborWallet
+        <Link href="/" className="flex min-h-11 items-center gap-2 text-lg font-extrabold tracking-tight">
+          <img src="/Arbor.png" alt="Logo" className="h-8 w-8" />
+          Arbor
         </Link>
         <nav className="order-last flex w-full flex-wrap items-center gap-1 md:order-none md:w-auto">
           {links.map((l) => {

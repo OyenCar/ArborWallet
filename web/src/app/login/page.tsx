@@ -16,7 +16,7 @@ export default function LoginPage() {
 }
 
 function LoginInner() {
-  const { user, loading, usingMagic, login } = useUser();
+  const { user, loading, usingMagic, login, loginWithGoogle } = useUser();
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/";
@@ -38,6 +38,18 @@ function LoginInner() {
     } catch {
       setError("Login was cancelled or failed. Try again.");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function connectGoogle() {
+    setBusy(true);
+    setError(null);
+    try {
+      // redirects to Google; returns to /callback (no code runs after this)
+      await loginWithGoogle();
+    } catch {
+      setError("Could not start Google sign-in. Try again.");
       setBusy(false);
     }
   }
@@ -78,9 +90,24 @@ function LoginInner() {
           >
             {busy ? "Opening Magic…" : "Sign in with email"}
           </Button>
+
+          <div className="flex items-center gap-3 text-xs text-muted">
+            <span className="h-px flex-1 bg-line/20" />
+            or
+            <span className="h-px flex-1 bg-line/20" />
+          </div>
+
+          <Button
+            variant="secondary"
+            className="w-full"
+            disabled={busy}
+            onClick={connectGoogle}
+          >
+            Continue with Google
+          </Button>
+
           <p className="text-center text-xs text-muted">
-            Secured by Magic · embedded wallet, no seed phrase. Enter your email
-            in the popup to receive a one-time code.
+            Secured by Magic · embedded wallet, no seed phrase.
           </p>
         </div>
       ) : (

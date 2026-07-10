@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@magic-ext/oauth2": "^15.10.0",
     "@magic-sdk/admin": "^2.8.2",
+    "@magic-sdk/commons": "^26.0.0",
     "@tanstack/react-query": "^5.62.0",
     "animejs": "^4.5.0",
     "magic-sdk": "^33.9.0",
