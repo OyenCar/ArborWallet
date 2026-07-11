@@ -1321,17 +1321,21 @@ git commit -m "feat(config): add registry facade with capability and provider re
 
 ---
 
-## Roadmap — subsequent plans (not detailed here)
+## Roadmap — subsequent plans
 
-Per `Planning.md` §21, this config layer is Plan 1. Later plans, each its own
-document + working software, in dependency order:
+Per `Planning.md` §21, this config layer is Plan 1. **All 6 subsequent plans
+are now written** (2026-07-11), each its own document, in dependency order.
+Plan 1 (this document) is also implemented and merged; Plans 2–7 are written
+but not yet implemented/merged.
 
-- **Plan 2 — Ports & Magic wallet adapter.** Define `WalletPort`/`AccountPort`/`ExecutionPort`/`PortfolioPort` interfaces + `IdentityAttestation`; wrap existing `/api/wallet/*` Magic TEE routes as `MagicWalletAdapter`; RPC portfolio adapter for native balances. *(Depends on Plan 1.)*
-- **Plan 3 — MongoDB Atlas data layer.** Collections from §18, environment-scoped repositories, indexes.
-- **Plan 4 — Multi-family wallet provisioning.** `WalletService` lifecycle, family-based provisioning, dashboard aggregation. Magic TEE BTC/SOL support verified 2026-07-11 (§22.4) — no longer gated.
-- **Plan 5 — Identity-based Vault membership.** `vault_memberships`, `WalletResolver`, `MembershipReconciler`, backfill of existing whitelists.
-- **Plan 6 — 7702 smart accounts + transfers.** `ZeroDev7702Adapter`, `TransferService` + `TransactionOrchestrator` saga, aggregation. Particle UA testnet coverage resolved 2026-07-11 (§22.3 — mainnet-only, confirmed via Particle's chain-coverage docs); `EvmRpcExecutionAdapter` built for real, `ParticleExecutionAdapter` deferred as a mainnet-only follow-up pending a live API smoke test.
-- **Plan 7 — Paymaster policy + portfolio indexer + env UI.** `PaymasterPolicy`, `IndexerPortfolioAdapter` + normalizer + cache, environment badges.
+- **[Plan 2 — Core Ports & Magic Wallet Adapter](2026-07-11-core-ports-magic-adapter.md).** `WalletPort`/`AccountPort`/`ExecutionPort`/`PortfolioPort` interfaces + `IdentityAttestation`; `MagicWalletAdapter` wraps existing `/api/wallet/*` routes (behavior preserved exactly); `RpcPortfolioAdapter` for native balances via the Plan 1 registry. `AccountPort`/`ExecutionPort` ship with stub adapters (real ones land in Plan 6). *(Depends on Plan 1.)*
+- **[Plan 3 — MongoDB Atlas Data Layer](2026-07-11-mongodb-data-layer.md).** All 14 schema'd §18 collections as environment-scoped repositories; `BaseRepository` is the enforcement mechanism behind §4.2's isolation guarantee. Indexes + majority write concern for the six §22.5 collections. `fund_requests`/`invoices`/`transactions` explicitly deferred (no §18 schema block). *(Depends on Plan 1.)*
+- **[Plan 4 — Multi-Family Wallet Provisioning](2026-07-11-wallet-provisioning.md).** `UserService` (find-or-create, auto-username), `WalletService` (idempotent, family-based provisioning + activation per §9.2), `DefaultWalletService` (§14). Magic TEE BTC/SOL support verified 2026-07-11 (§22.4). *(Depends on Plans 2, 3.)*
+- **[Plan 5 — Identity-Based Vault Membership](2026-07-11-vault-membership.md).** `WalletResolver`, `MembershipReconciler` (drift detection, asymmetric trust, audit trail per §11.2/§11.3), `VaultMembershipService`. `Vault.sol` doesn't exist in this repo yet (`contracts/` is empty) — built against a `VaultChainClient` interface + in-memory fake; real contract wiring is a named, blocked follow-up. *(Depends on Plans 3, 4.)*
+- **[Plan 6 — 7702 Smart Accounts & Transfer Orchestration](2026-07-11-smart-accounts-transfers.md).** `ZeroDev7702Adapter` (real, mocked-SDK tests), `EvmRpcExecutionAdapter` (real, same-chain), `ParticleExecutionAdapter` (stub — Particle UA confirmed mainnet-only 2026-07-11 per §22.3), `TransactionOrchestrator` (idempotent, resumable saga engine), `TransferService` (§15.2 recipient/chain resolution). Aggregation (§16) deferred to a named Plan 8, pending Plan 7's portfolio data and a resolved cross-chain execution story. *(Depends on Plans 2, 3, 4.)*
+- **[Plan 7 — Paymaster, Portfolio Indexer & Environment UI](2026-07-11-paymaster-portfolio-env-ui.md).** `PortfolioNormalizer` + `PortfolioService` (indexer-first/RPC-fallback per §13.4, full §13.3 aggregation including by-token), `PaymasterPolicy` (§17), environment badge + non-production banner (§19) wired into the existing layout/Nav without disturbing existing behavior. `IndexerPortfolioAdapter` and asset pricing explicitly deferred (no vendor chosen). *(Depends on Plans 1, 2, 3.)*
+
+**Not yet planned:** Plan 8 (cross-chain aggregation, §16) — deferred by Plan 6's own self-review pending Plan 7's portfolio data and a resolved Particle/bridge story; real `KernelFactory` (live ZeroDev SDK wiring) and real `ParticleExecutionAdapter`/`VaultChainClient`/`IndexerPortfolioAdapter` implementations, all blocked on external credentials or a not-yet-deployed contract, each named explicitly in its owning plan's Self-Review rather than silently absent.
 
 ---
 
