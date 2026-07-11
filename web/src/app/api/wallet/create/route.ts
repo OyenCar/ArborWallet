@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { MagicApiError, MagicWalletAdapter } from "@/lib/adapters/magic/magic-wallet-adapter";
 
 // POST /api/wallet/create
-// Creates an Ethereum wallet via Magic Server Wallet TEE.
+// Creates a wallet via Magic Server Wallet TEE, delegating to MagicWalletAdapter.
 // Expects a Firebase ID Token in the Authorization header.
 export async function POST(req: Request) {
   const secretKey = process.env.MAGIC_SECRET_KEY;
@@ -15,9 +16,9 @@ export async function POST(req: Request) {
   }
 
   const auth = req.headers.get("authorization");
-  const firebaseToken = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
+  const idToken = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
 
-  if (!firebaseToken) {
+  if (!idToken) {
     return NextResponse.json(
       { error: "Missing Firebase ID token" },
       { status: 401 },
@@ -25,34 +26,23 @@ export async function POST(req: Request) {
   }
 
   try {
-    const res = await fetch("https://tee.express.magiclabs.com/v1/wallet", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${firebaseToken}`,
-        "X-Magic-Secret-Key": secretKey,
-        "X-OIDC-Provider-ID": oidcProviderId,
-        "X-Magic-Chain": "ETH",
-      },
-      body: JSON.stringify({}),
-    });
-
-    if (!res.ok) {
-      const body = await res.text();
-      console.error("[wallet/create] Magic TEE error:", res.status, body);
-      return NextResponse.json(
-        { error: "Wallet creation failed", detail: body },
-        { status: res.status },
-      );
-    }
-
-    const data = await res.json();
+    const adapter = new MagicWalletAdapter({ secretKey, oidcProviderId });
+    const record = await adapter.provision(
+      { uid: "", email: null, idToken },
+      "evm",
+    );
     return NextResponse.json({
-      public_address: data.public_address,
-      wallet_type: data.wallet_type,
+      public_address: record.address,
+      wallet_type: "eoa",
     });
   } catch (err) {
     console.error("[wallet/create] Error:", err);
+    if (err instanceof MagicApiError) {
+      return NextResponse.json(
+        { error: "Wallet creation failed", detail: err.detail },
+        { status: err.status },
+      );
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },
