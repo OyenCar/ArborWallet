@@ -1276,19 +1276,42 @@ the rest as registry data. If a fifth genuine seam emerges (e.g. swap routing
 grows beyond execution), add a port then — ports are cheap to add, expensive
 to remove.
 
-### 22.3 Particle Universal Accounts vs canonical 7702 address ✋
+### 22.3 Particle Universal Accounts vs canonical 7702 address
 
 Particle UA historically deploys **its own smart-account addresses** per user.
 Letting UA define user addresses would fork identity against the 7702 design.
 Decision: Particle is *routing only* — sources and destinations are always the
 user's canonical wallets; any Particle-internal account is an invisible
 transit detail *provided funds never rest there beyond a transaction's
-lifetime*. **Verification spike required:** confirm Particle's current API
-supports destination-address routing in this mode, and confirm its testnet
-coverage. If either fails: testnet profile uses native-RPC execution only
-(capability flags already express this), and/or Particle is replaced by a
-bridge aggregator behind the same ExecutionPort. Vendor risk is real but
-contained to one adapter.
+lifetime*.
+
+**Testnet coverage — ✅ resolved 2026-07-11 (mainnet-only confirmed).**
+Particle's own chain-coverage docs
+(`developers.particle.network/universal-accounts/cha/chains`) list Universal
+Accounts support for exactly six chains — Ethereum, BNB Chain, X Layer, Base,
+Arbitrum, Solana — **all at mainnet chain IDs, zero testnets documented.**
+This resolves the open question in the direction this section already
+anticipated: **the `testnet` profile cannot use Particle at all.** No rework
+needed — Plan 1's `ProviderRegistry` (`web/src/lib/config/providers.ts`)
+already scopes `particle.environments = ["main"]`, and Plan 1's
+`registry.ts` `pickProvider` fallback (verified by two independent task
+reviews during Plan 1) already routes testnet EVM execution to `evm-rpc`
+instead. The architecture was built correctly ahead of this confirmation;
+this entry just closes the loop.
+
+**Destination-address routing — ⚠ partially confirmed, not a hard blocker.**
+Particle's SDK exposes `createUniversalTransaction({ to, chainId,
+expectTokens, ... })` — a `to` parameter for an arbitrary recipient address
+is part of the documented call shape, consistent with the "routing only"
+decision above. This is weaker evidence than the chains-list finding (found
+via secondary documentation/blog sources, not a single authoritative
+API-reference page) and is not yet a live-tested confirmation. Given Particle
+is mainnet-only anyway (previous finding), this becomes relevant only once a
+mainnet execution adapter is actually being wired — Plan 6 defers the real
+`ParticleExecutionAdapter` for exactly this reason, building
+`EvmRpcExecutionAdapter` (same-chain, all environments) for real now and
+treating `ParticleExecutionAdapter` as a mainnet-only, explicitly-blocked
+follow-up pending a live API smoke test with real credentials.
 
 ### 22.4 Custody concentration & Magic TEE
 

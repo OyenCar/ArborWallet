@@ -1330,7 +1330,7 @@ document + working software, in dependency order:
 - **Plan 3 — MongoDB Atlas data layer.** Collections from §18, environment-scoped repositories, indexes.
 - **Plan 4 — Multi-family wallet provisioning.** `WalletService` lifecycle, family-based provisioning, dashboard aggregation. Magic TEE BTC/SOL support verified 2026-07-11 (§22.4) — no longer gated.
 - **Plan 5 — Identity-based Vault membership.** `vault_memberships`, `WalletResolver`, `MembershipReconciler`, backfill of existing whitelists.
-- **Plan 6 — 7702 smart accounts + transfers.** `ZeroDev7702Adapter`, `TransferService` + `TransactionOrchestrator` saga, aggregation. **✋ Gate: verify Particle UA destination-routing + testnet coverage (§22.3) before the execution-adapter step.**
+- **Plan 6 — 7702 smart accounts + transfers.** `ZeroDev7702Adapter`, `TransferService` + `TransactionOrchestrator` saga, aggregation. Particle UA testnet coverage resolved 2026-07-11 (§22.3 — mainnet-only, confirmed via Particle's chain-coverage docs); `EvmRpcExecutionAdapter` built for real, `ParticleExecutionAdapter` deferred as a mainnet-only follow-up pending a live API smoke test.
 - **Plan 7 — Paymaster policy + portfolio indexer + env UI.** `PaymasterPolicy`, `IndexerPortfolioAdapter` + normalizer + cache, environment badges.
 
 ---
